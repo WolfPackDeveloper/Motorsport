@@ -8,6 +8,7 @@
 
 class AStaticMeshActor;
 class ACameraPlayerPawn;
+class AMotorsportGameModeBase;
 
 UCLASS()
 class MOTORSPORT_API ACameraPlayerController : public APlayerController
@@ -24,11 +25,13 @@ private:
 	int32 ScreenSizeY = 0;
 	// Чтобы объект не спавился в "полу". Не универсальненько, а что делать.
 	float GroundThickness = 20.f;
-
 	bool bMouseButtonIsPressed = false;
 
 	UPROPERTY()
 	ACameraPlayerPawn* PlayerCamera = nullptr;
+
+	UPROPERTY()
+	AMotorsportGameModeBase* GameMode = nullptr;
 
 	void MouseLeftClick();
 
@@ -59,12 +62,12 @@ protected:
 
 public:
 
-	// Переиграли в параметр. Так удобнее использовать потом.
-	//UPROPERTY(EditAnywhere, Category = "SpawnObstacles")
-	//TSubclassOf<AStaticMeshActor> ObstacleClass;
+	UPROPERTY(EditAnywhere, Category = "Obstacles")
+	TSubclassOf<AStaticMeshActor> ObstacleClass;
 
+	// Spawn object of random AStaticMeshClass
 	UFUNCTION(BlueprintCallable)
-	void SpawnObstacle(TSubclassOf<AStaticMeshActor> ObstacleClass);
+	void SpawnObstacle();
 
 	// Called every frame
 	virtual void Tick(float DeltaTime) override;

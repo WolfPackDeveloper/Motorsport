@@ -3,13 +3,19 @@
 
 #include "CameraPlayerController.h"
 #include "Motorsport/Pawns/CameraPlayerPawn.h"
+#include "Motorsport/MotorsportGameModeBase.h"
 
 #include "Camera/CameraComponent.h"
 #include "Components/StaticMeshComponent.h"
+#include "ConstructorHelpers.h" // Random Meshes
 #include "Engine/Engine.h" // Debug strings
+//#include "Engine/StaticMesh.h" // Ну хз... поможет ли?
 #include "Engine/StaticMeshActor.h"
 #include "GameFramework/Pawn.h"
 #include "GameFramework/SpringArmComponent.h"
+#include "Kismet/GameplayStatics.h" // GetGameMode - Получаем ГеймМод! Вот и не нужны мне ваши раковины!
+
+#include "Math/BoxSphereBounds.h" // Debug spawned mesh.
 
 ACameraPlayerController::ACameraPlayerController()
 {
@@ -87,29 +93,64 @@ void ACameraPlayerController::BeginPlay()
 	GetViewportSize(ScreenSizeX, ScreenSizeY);
 
 	PlayerCamera = Cast<ACameraPlayerPawn>(GetPawn());
-
+	GameMode = Cast<AMotorsportGameModeBase>(UGameplayStatics::GetGameMode(GetWorld()));
 }
 
-void ACameraPlayerController::SpawnObstacle(TSubclassOf<AStaticMeshActor> ObstacleClass)
+void ACameraPlayerController::SpawnObstacle()
 {
-	float SpawnScaleX = FMath::FRandRange(1.f, 10.f);
-	float SpawnScaleY = FMath::FRandRange(1.f, 10.f);
+	if (!IsValid(GameMode)) return;
+	
+	// Выбираем рандомный меш
+	TArray<UStaticMesh*> MeshArray = GameMode->GetObstacleMeshes();
+	//TArray<UStaticMesh*> MeshArray = GameMode->ObstacleMeshes;
+
+	if (MeshArray.Num() < 1) return;
+	
+	int32 MeshIndex = FMath::RandRange(0, MeshArray.Num() - 1);
+
+	// Debug
+	//GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Yellow, FString::Printf(TEXT("Ramdom Mesh: %i"), MeshIndex));
+
+	if (MeshArray[MeshIndex] == nullptr) return;
+
+	// Debug
+	//if (MeshArray[MeshIndex] != nullptr)
+	//{
+	//	GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Yellow, FString::Printf(TEXT("Mesh Exists?!")));
+	//}
+	
+	// Выбираем рандомный размер меша
+	float SpawnScaleX = FMath::FRandRange(1.f, 30.f);
+	float SpawnScaleY = FMath::FRandRange(1.f, 20.f);
 	float SpawnScaleZ = 3.f;
 
-	float SpawnLocationX = 0.f;
-	float SpawnLocationY = 0.f;
-	float SpawnLocationZ = SpawnScaleZ / 2 + GroundThickness; // = 1/2 SpawnedObjectZ + 20.f (1/2 FloorMeshZ?)
+	// Спавним под курсором препятствие
+	FHitResult Hit;
+	GetHitResultUnderCursor(ECC_Visibility, false, Hit);
 
-	GetMousePosition(SpawnLocationX, SpawnLocationY);
+	if (Hit.bBlockingHit)
+	{
+		float X = Hit.ImpactPoint.X;
+		float Y = Hit.ImpactPoint.Y;
+		float Z = SpawnScaleZ * 50 + GroundThickness; // = 1*100/2 SpawnedObjectZ + 20.f (1/2 FloorMeshZ?)
 
-	FVector Location = FVector(SpawnLocationX, SpawnLocationY, SpawnLocationZ);
-	FVector Scale = FVector(SpawnScaleX, SpawnScaleY, SpawnScaleZ);
+		FVector Location = FVector(X, Y, Z);
+		FRotator Rotation = FRotator(0.f, 0.f, 0.f);
+		FVector Scale = FVector(SpawnScaleX, SpawnScaleY, SpawnScaleZ);
 
-	FocusedActor = GetWorld()->SpawnActor<AStaticMeshActor>(ObstacleClass);
-	FocusedActor->SetActorLocation(Location);
-	FocusedActor->GetStaticMeshComponent()->SetWorldScale3D(Scale);
-	FocusedActor->GetStaticMeshComponent()->SetMobility(EComponentMobility::Movable);
-	
+		FocusedActor = GetWorld()->SpawnActor<AStaticMeshActor>(ObstacleClass, Location, Rotation);
+
+		FVector ActorLocation = FocusedActor->GetActorLocation();
+		UStaticMesh* Mesh = MeshArray[MeshIndex];
+		
+		// Debug
+		//GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Orange, FString::Printf(TEXT("Spawned Obstacle Location: %s"), *ActorLocation.ToString()));
+
+		// Настраиваем меш
+		FocusedActor->GetStaticMeshComponent()->SetMobility(EComponentMobility::Movable);
+		FocusedActor->GetStaticMeshComponent()->SetStaticMesh(MeshArray[MeshIndex]);
+		FocusedActor->GetStaticMeshComponent()->SetWorldScale3D(Scale);
+	}
 	FocusedActor = nullptr;
 }
 
@@ -156,4 +197,6 @@ void ACameraPlayerController::SetupInputComponent()
 
 	InputComponent->BindAction(TEXT("Select"), EInputEvent::IE_Pressed, this, &ACameraPlayerController::MouseLeftClick);
 	InputComponent->BindAction(TEXT("Select"), EInputEvent::IE_Released, this, &ACameraPlayerController::MouseLeftReleased);
+	InputComponent->BindAction(TEXT("CreateObstacle"), EInputEvent::IE_Pressed, this, &ACameraPlayerController::SpawnObstacle);
+	
 }
