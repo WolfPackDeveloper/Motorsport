@@ -2,20 +2,21 @@
 
 
 #include "CameraPlayerController.h"
-#include "Motorsport/Pawns/CameraPlayerPawn.h"
-#include "Motorsport/MotorsportGameModeBase.h"
+#include "Actors/RouteActor.h"
+#include "Pawns/CameraPlayerPawn.h"
+#include "MotorsportGameModeBase.h"
 
 #include "Camera/CameraComponent.h"
 #include "Components/StaticMeshComponent.h"
 #include "ConstructorHelpers.h" // Random Meshes
 #include "Engine/Engine.h" // Debug strings
-//#include "Engine/StaticMesh.h" // Ну хз... поможет ли?
+//#include "Engine/StaticMesh.h"
 #include "Engine/StaticMeshActor.h"
 #include "GameFramework/Pawn.h"
 #include "GameFramework/SpringArmComponent.h"
 #include "Kismet/GameplayStatics.h" // GetGameMode - Получаем ГеймМод! Вот и не нужны мне ваши раковины!
 
-#include "Math/BoxSphereBounds.h" // Debug spawned mesh.
+//#include "Math/BoxSphereBounds.h" // Debug spawned mesh.
 
 ACameraPlayerController::ACameraPlayerController()
 {
@@ -23,6 +24,7 @@ ACameraPlayerController::ACameraPlayerController()
 	bMouseButtonIsPressed = false;
 	Margin = 10;
 	FlipThroughSpeed = 20.f;
+	RouteNodesAmount = 10;
 
 	bShowMouseCursor = true;
 	bEnableClickEvents = true;
@@ -36,6 +38,9 @@ void ACameraPlayerController::MouseLeftClick()
 
 	FHitResult HitResult;
 	bool bIsHit = GetHitResultUnderCursorByChannel(UEngineTypes::ConvertToTraceType(ECC_Visibility), true, HitResult);
+
+	// Debug - координаты на карте.
+	//GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Green, FString::Printf(TEXT("Mouse world something: %s"), *HitResult.ImpactPoint.ToString()));
 
 	if (bIsHit)
 	{
@@ -102,7 +107,6 @@ void ACameraPlayerController::SpawnObstacle()
 	
 	// Выбираем рандомный меш
 	TArray<UStaticMesh*> MeshArray = GameMode->GetObstacleMeshes();
-	//TArray<UStaticMesh*> MeshArray = GameMode->ObstacleMeshes;
 
 	if (MeshArray.Num() < 1) return;
 	
@@ -154,6 +158,14 @@ void ACameraPlayerController::SpawnObstacle()
 	FocusedActor = nullptr;
 }
 
+void ACameraPlayerController::BuildRoute()
+{
+	AActor* Ground = GameMode->GetGround();
+	ARouteActor* Route = GameMode->GetRouteActor();
+
+	Route->BuildRoute(Ground, 10);
+}
+
 void ACameraPlayerController::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
@@ -198,5 +210,6 @@ void ACameraPlayerController::SetupInputComponent()
 	InputComponent->BindAction(TEXT("Select"), EInputEvent::IE_Pressed, this, &ACameraPlayerController::MouseLeftClick);
 	InputComponent->BindAction(TEXT("Select"), EInputEvent::IE_Released, this, &ACameraPlayerController::MouseLeftReleased);
 	InputComponent->BindAction(TEXT("CreateObstacle"), EInputEvent::IE_Pressed, this, &ACameraPlayerController::SpawnObstacle);
-	
+
+	InputComponent->BindAction(TEXT("BuildRoute"), EInputEvent::IE_Pressed, this, &ACameraPlayerController::BuildRoute);
 }

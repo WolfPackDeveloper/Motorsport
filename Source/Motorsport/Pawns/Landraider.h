@@ -6,6 +6,8 @@
 #include "GameFramework/Pawn.h"
 #include "Landraider.generated.h"
 
+class UStaticMeshComponent;
+
 UCLASS()
 class MOTORSPORT_API ALandraider : public APawn
 {
@@ -16,6 +18,10 @@ public:
 	ALandraider();
 
 protected:
+	
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Mesh")
+	UStaticMeshComponent* Mesh;
+
 	// Called when the game starts or when spawned
 	virtual void BeginPlay() override;
 
