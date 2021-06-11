@@ -8,6 +8,7 @@
 
 class USpringArmComponent;
 class UCameraComponent;
+class USceneComponent;
 
 UCLASS()
 class MOTORSPORT_API ACameraPlayerPawn : public APawn
@@ -17,6 +18,12 @@ class MOTORSPORT_API ACameraPlayerPawn : public APawn
 public:
 	// Sets default values for this pawn's properties
 	ACameraPlayerPawn();
+
+private:
+
+	UPROPERTY()
+	USceneComponent* Root = nullptr;
+
 
 protected:
 	// Called when the game starts or when spawned

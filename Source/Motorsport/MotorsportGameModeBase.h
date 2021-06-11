@@ -5,7 +5,7 @@
 #include "CoreMinimal.h"
 #include "GameFramework/GameModeBase.h"
 
-#include "ConstructorHelpers.h" // Random Meshes
+//#include "ConstructorHelpers.h" // Random Meshes
 
 #include "MotorsportGameModeBase.generated.h"
 
@@ -13,6 +13,7 @@ class UStaticMesh;
 
 class ARouteActor;
 class ALandraider;
+//class AMachineSpirit;
 
 UENUM()
 enum class EGameStatus : uint8
@@ -33,14 +34,19 @@ public:
 
 private:
 
+	FVector GroundAccessBounds;
+	
 	UPROPERTY()
 	AActor* GroundActor = nullptr;
 
 	UPROPERTY()
 	ARouteActor* RouteActor = nullptr;
 
+	//UPROPERTY()
+	//AMachineSpirit* LRController = nullptr;
+
 	UPROPERTY()
-		ALandraider* Landraider = nullptr;
+	ALandraider* Landraider = nullptr;
 
 	UPROPERTY()
 	TArray<UStaticMesh*> ObstacleMeshes;
@@ -48,9 +54,16 @@ private:
 	void AddMeshForObstacles(TCHAR* ObjectFQName);
 	
 	// Согласен - суперкриво, но времени уже не хватает на изящные решения.
+	UFUNCTION()
 	void DefineGroundActor(FName GroundActorTag);
-
+	
+	UFUNCTION()
+	FVector DefineAccessBounds(AActor* Ground, float Margin);
+	
 protected:
+
+	UPROPERTY(EditDefaultsOnly, Category = "GroundBounds")
+	float BoundMargin = 200.f;
 
 	UPROPERTY(BlueprintReadWrite)
 	EGameStatus GameStatus = EGameStatus::GameStopped;
@@ -58,6 +71,9 @@ protected:
 	// И это тоже.
 	UPROPERTY(EditDefaultsOnly, Category = "Route")
 	TSubclassOf<ARouteActor> RouteClass;
+
+	//UPROPERTY(EditDefaultsOnly, Category = "Machine")
+	//TSubclassOf<AMachineSpirit> MachineSpiritClass;
 
 	UPROPERTY(EditDefaultsOnly, Category = "Machine")
 	TSubclassOf<ALandraider> MachineClass;
@@ -84,4 +100,7 @@ public:
 
 	UFUNCTION()
 	AActor* GetGround() const;
+
+	UFUNCTION()
+	FVector GetGroundBounds() const;
 };

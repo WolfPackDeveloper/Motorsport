@@ -7,9 +7,10 @@
 //#include "Engine/SplineMeshActor.h"
 #include "RouteActor.generated.h"
 
+class USceneComponent;
 class USplineComponent;
 
-//struct FBox;
+class AMotorsportGameModeBase;
 
 UCLASS()
 class MOTORSPORT_API ARouteActor : public AActor
@@ -22,11 +23,20 @@ public:
 
 private:
 	
-	FVector RouteBoundOrigin;
-	FVector RouteBoundExtent;
-	float DefaultMargin = 200.f;
+//	FVector RouteBoundOrigin;
+//	FVector RouteBoundExtent;
+//	float DefaultMargin = 200.f;
 
-	void GetBoundsForRoute(AActor* Ground);
+	FVector RouteBounds;
+
+	UPROPERTY()
+	USceneComponent* Root = nullptr;
+
+	UPROPERTY()
+	AMotorsportGameModeBase* GameMode = nullptr;
+
+//	void GetBoundsForRoute(AActor* Ground);
+	void GetBoundsForRoute();
 
 protected:
 	
@@ -54,11 +64,12 @@ protected:
 
 public:	
 
-	UFUNCTION(BlueprintCallable)
-	void SetRouteBoundsMargin(float Margin);
+	// Не знаю, а нужно ли менять границу в рантайме вообще?
+	//UFUNCTION(BlueprintCallable)
+	//void SetRouteBoundsMargin(float Margin);
 
-	UFUNCTION(BlueprintCallable)
-	float GetRouteBoundsMargin();
+	//UFUNCTION(BlueprintCallable)
+	//float GetRouteBoundsMargin();
 
 	UFUNCTION(BlueprintCallable)
 	USplineComponent* GetRouteSpline() const;

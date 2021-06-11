@@ -12,9 +12,12 @@ ACameraPlayerPawn::ACameraPlayerPawn()
  	// Set this pawn to call Tick() every frame.  You can turn this off to improve performance if you don't need it.
 	PrimaryActorTick.bCanEverTick = true;
 
+	Root = CreateDefaultSubobject<USceneComponent>(TEXT("RootComponent"));
+	SetRootComponent(Root);
+
 	// Настройки камеры
 	SpringArm = CreateDefaultSubobject<USpringArmComponent>(TEXT("SpringArm"));
-	SpringArm->SetupAttachment(RootComponent);
+	SpringArm->SetupAttachment(Root);
 	SpringArm->bDoCollisionTest = false;	
 	
 	Camera = CreateDefaultSubobject<UCameraComponent>(TEXT("Camera"));

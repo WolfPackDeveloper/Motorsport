@@ -6,6 +6,7 @@
 #include "GameFramework/Pawn.h"
 #include "Landraider.generated.h"
 
+class USceneComponent;
 class UStaticMeshComponent;
 
 UCLASS()
@@ -17,8 +18,16 @@ public:
 	// Sets default values for this pawn's properties
 	ALandraider();
 
+private:
+	
+	UPROPERTY()
+	USceneComponent* Root = nullptr;
+
 protected:
 	
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Mass")
+	float Mass = 5000.f;
+
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Mesh")
 	UStaticMeshComponent* Mesh;
 

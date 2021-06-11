@@ -44,6 +44,7 @@ void ACameraPlayerController::MouseLeftClick()
 
 	if (bIsHit)
 	{
+		// С таким подходом не двигает машинку и всякое такое... А надо ли? Потом, если время останется.
 		FocusedActor = Cast<AStaticMeshActor>(HitResult.GetActor());
 		DefaultMouseCursor = EMouseCursor::GrabHandClosed;
 	}
@@ -163,7 +164,7 @@ void ACameraPlayerController::BuildRoute()
 	AActor* Ground = GameMode->GetGround();
 	ARouteActor* Route = GameMode->GetRouteActor();
 
-	Route->BuildRoute(Ground, 10);
+	Route->BuildRoute(Ground, RouteNodesAmount);
 }
 
 void ACameraPlayerController::Tick(float DeltaTime)

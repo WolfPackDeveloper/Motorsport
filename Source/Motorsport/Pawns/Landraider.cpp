@@ -4,6 +4,7 @@
 #include "Landraider.h"
 
 #include "Components/StaticMeshComponent.h"
+#include "Engine/StaticMesh.h"
 
 // Sets default values
 ALandraider::ALandraider()
@@ -11,7 +12,18 @@ ALandraider::ALandraider()
  	// Set this pawn to call Tick() every frame.  You can turn this off to improve performance if you don't need it.
 	PrimaryActorTick.bCanEverTick = true;
 
+	Root = CreateDefaultSubobject<USceneComponent>(TEXT("Root"));
+	SetRootComponent(Root);
+
 	Mesh = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("Mesh"));
+	Mesh->SetupAttachment(Root);
+	// Ќужно подн€ть меш, а то он будет при спавне "заземл€тьс€" и не будет спавнитьс€. ѕока что в Blueprint.
+	Mesh->SetSimulatePhysics(true);
+	Mesh->SetCollisionEnabled(ECollisionEnabled::QueryAndPhysics);
+	Mesh->SetCollisionResponseToChannel(ECollisionChannel::ECC_Vehicle, ECollisionResponse::ECR_Block);
+	Mesh->GetBodyInstance()->SetMassOverride(Mass);
+	Mesh->GetBodyInstance()->UpdateMassProperties();
+
 }
 
 // Called when the game starts or when spawned

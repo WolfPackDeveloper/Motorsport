@@ -4,6 +4,7 @@
 #include "MotorsportGameModeBase.h"
 #include "Actors/RouteActor.h"
 #include "Pawns/Landraider.h"
+#include "Controllers/MachineSpirit.h"
 
 #include "Engine/StaticMesh.h" // Ну хз... поможет ли?
 #include "Engine/StaticMeshActor.h" // Find Ground - lazy method
@@ -66,16 +67,54 @@ void AMotorsportGameModeBase::DefineGroundActor(FName GroundActorTag)
 	}
 }
 
+FVector AMotorsportGameModeBase::DefineAccessBounds(AActor* Ground, float Margin)
+{
+	if (!IsValid(Ground)) return FVector(0.f, 0.f, 0.f);
+
+	FVector BoundOrigin;
+	FVector BoundExtent;
+
+	Ground->GetActorBounds(true, BoundOrigin, BoundExtent);
+
+	BoundExtent.X -= Margin;
+	BoundExtent.Y -= Margin;
+
+	return FVector(BoundExtent.X, BoundExtent.Y, BoundExtent.Z);
+}
+
 void AMotorsportGameModeBase::BeginPlay()
 {	
 	Super::BeginPlay();
 
 	DefineGroundActor(TEXT("Ground"));
+	GroundAccessBounds = DefineAccessBounds(GroundActor, BoundMargin);
 	
-	RouteActor = GetWorld()->SpawnActor<ARouteActor>(RouteClass);
+	float SpawnMargin = 300.f;
+	// Или маяться с ActorSpawnParams.SpawnCollisionHandlingOverride, или Z + 1
+	// Это в случае, если меш поднят целиком над нулём! Иначе нужно вылавливать: Z = Scale.Z / 2 * 100 + 1
+	FVector Location = FVector(SpawnMargin - GroundAccessBounds.X, SpawnMargin - GroundAccessBounds.Y, GroundAccessBounds.Z + 1.f);
+	FRotator Rotation = FRotator(0.f, 0.f, 0.f);
 
-	// Спавним трактор. и назначаем ему позицию.
-	Landraider = GetWorld()->SpawnActor<ALandraider>(MachineClass);
+	// Десантируем дроппод с Лэндрейдером.
+	if (!IsValid(Landraider))
+	{
+		
+		//bool bNoCollisionFail = true;
+		//FActorSpawnParameters SpawnParams;
+		//ActorSpawnParams.SpawnCollisionHandlingOverride = bNoCollisionFail ? ESpawnActorCollisionHandlingMethod::AlwaysSpawn : ESpawnActorCollisionHandlingMethod::AdjustIfPossibleButDontSpawnIfColliding;
+		//SpawnParams.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AdjustIfPossibleButAlwaysSpawn;
+
+		//Landraider = GetWorld()->SpawnActor<ALandraider>(MachineClass, Location, Rotation, SpawnParams);
+		Landraider = GetWorld()->SpawnActor<ALandraider>(MachineClass, Location, Rotation);
+	}
+
+	// Спавним маршрут перед носом у Лэндрейдера.
+	Location.X += SpawnMargin;
+
+	if (!IsValid(RouteActor))
+	{
+		RouteActor = GetWorld()->SpawnActor<ARouteActor>(RouteClass, Location, Rotation);
+	}
 }
 
 TArray<UStaticMesh*> AMotorsportGameModeBase::GetObstacleMeshes() const
@@ -86,6 +125,11 @@ TArray<UStaticMesh*> AMotorsportGameModeBase::GetObstacleMeshes() const
 ARouteActor* AMotorsportGameModeBase::GetRouteActor() const
 {
 	return RouteActor;
+}
+
+ALandraider* AMotorsportGameModeBase::GetMachineActor() const
+{
+	return Landraider;
 }
 
 void AMotorsportGameModeBase::SetGameStatus(EGameStatus Status)
@@ -101,4 +145,9 @@ EGameStatus AMotorsportGameModeBase::GetGameStatus() const
 AActor* AMotorsportGameModeBase::GetGround() const
 {
 	return GroundActor;
+}
+
+FVector AMotorsportGameModeBase::GetGroundBounds() const
+{
+	return GroundAccessBounds;
 }
