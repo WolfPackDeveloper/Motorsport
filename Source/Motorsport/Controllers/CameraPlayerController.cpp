@@ -125,8 +125,8 @@ void ACameraPlayerController::SpawnObstacle()
 	//}
 	
 	// Выбираем рандомный размер меша
-	float SpawnScaleX = FMath::FRandRange(1.f, 30.f);
-	float SpawnScaleY = FMath::FRandRange(1.f, 20.f);
+	float SpawnScaleX = FMath::FRandRange(1.f, 20.f);
+	float SpawnScaleY = FMath::FRandRange(1.f, 10.f);
 	float SpawnScaleZ = 3.f;
 
 	// Спавним под курсором препятствие
@@ -161,10 +161,10 @@ void ACameraPlayerController::SpawnObstacle()
 
 void ACameraPlayerController::BuildRoute()
 {
-	AActor* Ground = GameMode->GetGround();
+	//AActor* Ground = GameMode->GetGround();
 	ARouteActor* Route = GameMode->GetRouteActor();
 
-	Route->BuildRoute(Ground, RouteNodesAmount);
+	Route->BuildRoute(EDirection::Up, EDirection::Right, ERouteType::Snake);
 }
 
 void ACameraPlayerController::Tick(float DeltaTime)
