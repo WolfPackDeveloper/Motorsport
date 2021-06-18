@@ -2,6 +2,7 @@
 
 
 #include "Landraider.h"
+#include "Components/LandraiderMovementComponent.h"
 
 #include "Components/StaticMeshComponent.h"
 #include "Engine/StaticMesh.h"
@@ -24,6 +25,8 @@ ALandraider::ALandraider()
 	Mesh->GetBodyInstance()->SetMassOverride(Mass);
 	Mesh->GetBodyInstance()->UpdateMassProperties();
 
+	MovementComponent = CreateDefaultSubobject<ULandraiderMovementComponent>(TEXT("MovementComponent"));
+
 }
 
 // Called when the game starts or when spawned
@@ -31,6 +34,11 @@ void ALandraider::BeginPlay()
 {
 	Super::BeginPlay();
 	
+}
+
+ULandraiderMovementComponent* ALandraider::GetMovementComponent()
+{
+	return MovementComponent;
 }
 
 // Called every frame

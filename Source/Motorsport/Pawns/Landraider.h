@@ -9,6 +9,8 @@
 class USceneComponent;
 class UStaticMeshComponent;
 
+class ULandraiderMovementComponent;
+
 UCLASS()
 class MOTORSPORT_API ALandraider : public APawn
 {
@@ -31,10 +33,17 @@ protected:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Mesh")
 	UStaticMeshComponent* Mesh;
 
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Movement")
+	ULandraiderMovementComponent* MovementComponent;
+
+
 	// Called when the game starts or when spawned
 	virtual void BeginPlay() override;
 
 public:	
+	
+	ULandraiderMovementComponent* GetMovementComponent();
+	
 	// Called every frame
 	virtual void Tick(float DeltaTime) override;
 

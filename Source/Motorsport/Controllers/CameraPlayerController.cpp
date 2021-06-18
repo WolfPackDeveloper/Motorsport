@@ -3,7 +3,10 @@
 
 #include "CameraPlayerController.h"
 #include "Actors/RouteActor.h"
+#include "MachineSpirit.h"	// On-Off MachineSpirit
 #include "Pawns/CameraPlayerPawn.h"
+#include "Pawns/Landraider.h" // Ручное управление для теста MovementComponent
+#include "Components/LandraiderMovementComponent.h" // Ручное управление для теста MovementComponent
 #include "MotorsportGameModeBase.h"
 
 #include "Camera/CameraComponent.h"
@@ -87,6 +90,121 @@ FVector ACameraPlayerController::MoveScreen()
 	return FVector(CameraDirectionX, CameraDirectionY, 0.f);
 }
 
+void ACameraPlayerController::GetLandraider()
+{
+	
+	if (IsValid(GameMode))
+	{
+		CurrentLandraider = Cast<ALandraider>(GameMode->GetMachineActor());
+	}
+	if (IsValid(CurrentLandraider))
+	{
+
+		CurrentMachineSpirit = Cast<AMachineSpirit>(CurrentLandraider->GetController());
+	}
+}
+
+void ACameraPlayerController::LandraiderMoveForward()
+{
+	if (!IsValid(CurrentLandraider))
+	{
+		GetLandraider();
+	}
+	else
+	{
+		CurrentLandraider->GetMovementComponent()->SetDriveAction(EDriveAction::FullThrottle, 1.f);
+	}
+}
+
+void ACameraPlayerController::LandraiderMoveBack()
+{
+	if (!IsValid(CurrentLandraider))
+	{
+		GetLandraider();
+	}
+	else
+	{
+		CurrentLandraider->GetMovementComponent()->SetDriveAction(EDriveAction::ReverseGear, 1.f);
+	}
+}
+
+void ACameraPlayerController::LandraiderBrake()
+{
+	if (!IsValid(CurrentLandraider) || !IsValid(CurrentMachineSpirit))
+	{
+		GetLandraider();
+	}
+	else
+	{
+		CurrentLandraider->GetMovementComponent()->SetDriveAction(EDriveAction::Braking, 1.f);
+	}
+}
+
+void ACameraPlayerController::LandraiderIdle()
+{
+	if (!IsValid(CurrentLandraider) || !IsValid(CurrentMachineSpirit))
+	{
+		GetLandraider();
+	}
+	else
+	{
+		CurrentLandraider->GetMovementComponent()->SetDriveAction(EDriveAction::IdleMoving, 1.f);
+	}
+}
+
+void ACameraPlayerController::LandraiderTurnRight()
+{
+	if (!IsValid(CurrentLandraider))
+	{
+		GetLandraider();
+	}
+	else
+	{
+		CurrentLandraider->GetMovementComponent()->Steering(1.f);
+	}
+}
+
+void ACameraPlayerController::LandraiderTurnLeft()
+{
+	if (!IsValid(CurrentLandraider))
+	{
+		GetLandraider();
+	}
+	else
+	{
+		CurrentLandraider->GetMovementComponent()->Steering(-1.f);
+	}
+}
+
+void ACameraPlayerController::SetCurrentMachineSpiritState()
+{
+	if (!IsValid(CurrentLandraider))
+	{
+		GetLandraider();
+	}
+	else
+	{
+		CurrentSpiritState = CurrentMachineSpirit->GetSpiritState();
+
+		switch (CurrentSpiritState)
+		{
+		case EMachineSpiritState::Awake:
+			CurrentSpiritState = EMachineSpiritState::Sleeps;
+			break;
+
+		case EMachineSpiritState::Sleeps:
+			CurrentSpiritState = EMachineSpiritState::Awake;
+			break;
+
+		default:
+			break;
+		}
+
+		CurrentMachineSpirit->SetMachineSpiritState(CurrentSpiritState);
+
+	}
+}
+
 void ACameraPlayerController::BeginPlay()
 {
 	Super::BeginPlay();
@@ -100,6 +218,8 @@ void ACameraPlayerController::BeginPlay()
 
 	PlayerCamera = Cast<ACameraPlayerPawn>(GetPawn());
 	GameMode = Cast<AMotorsportGameModeBase>(UGameplayStatics::GetGameMode(GetWorld()));
+	// Возня для тестов движения и включения-выключения Духа Машины.
+	GetLandraider();
 }
 
 void ACameraPlayerController::SpawnObstacle()
@@ -125,7 +245,7 @@ void ACameraPlayerController::SpawnObstacle()
 	//}
 	
 	// Выбираем рандомный размер меша
-	float SpawnScaleX = FMath::FRandRange(1.f, 20.f);
+	float SpawnScaleX = FMath::FRandRange(1.f, 10.f);
 	float SpawnScaleY = FMath::FRandRange(1.f, 10.f);
 	float SpawnScaleZ = 3.f;
 
@@ -213,4 +333,19 @@ void ACameraPlayerController::SetupInputComponent()
 	InputComponent->BindAction(TEXT("CreateObstacle"), EInputEvent::IE_Pressed, this, &ACameraPlayerController::SpawnObstacle);
 
 	InputComponent->BindAction(TEXT("BuildRoute"), EInputEvent::IE_Pressed, this, &ACameraPlayerController::BuildRoute);
+
+	InputComponent->BindAction(TEXT("AwakenMachineSpirit"), EInputEvent::IE_Pressed, this, &ACameraPlayerController::SetCurrentMachineSpiritState);
+	
+	// Test MovementComponent
+	InputComponent->BindAction(TEXT("MoveLandraiderForward"), EInputEvent::IE_Pressed, this, &ACameraPlayerController::LandraiderMoveForward);
+	InputComponent->BindAction(TEXT("MoveLandraiderBack"), EInputEvent::IE_Pressed, this, &ACameraPlayerController::LandraiderMoveBack);
+	InputComponent->BindAction(TEXT("BrakeLandraider"), EInputEvent::IE_Pressed, this, &ACameraPlayerController::LandraiderBrake);
+	InputComponent->BindAction(TEXT("TurnLandraiderRight"), EInputEvent::IE_Pressed, this, &ACameraPlayerController::LandraiderTurnRight);
+	InputComponent->BindAction(TEXT("TurnLandraiderLeft"), EInputEvent::IE_Pressed, this, &ACameraPlayerController::LandraiderTurnLeft);
+
+	InputComponent->BindAction(TEXT("MoveLandraiderForward"), EInputEvent::IE_Released, this, &ACameraPlayerController::LandraiderIdle);
+	InputComponent->BindAction(TEXT("MoveLandraiderBack"), EInputEvent::IE_Released, this, &ACameraPlayerController::LandraiderIdle);
+	InputComponent->BindAction(TEXT("BrakeLandraider"), EInputEvent::IE_Released, this, &ACameraPlayerController::LandraiderIdle);
+
+
 }

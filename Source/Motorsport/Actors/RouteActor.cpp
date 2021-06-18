@@ -83,7 +83,7 @@ FVector ARouteActor::GetDistanceToBounds(EDirection UpDown, EDirection RightLeft
 	}
 
 	// Debug
-	GEngine->AddOnScreenDebugMessage(-1, 10.f, FColor::Green, FString::Printf(TEXT("Distance to bounds: %s"), *DistanceToBound.ToString()));
+	//GEngine->AddOnScreenDebugMessage(-1, 10.f, FColor::Green, FString::Printf(TEXT("Distance to bounds: %s"), *DistanceToBound.ToString()));
 
 	return DistanceToBound;
 }
@@ -109,7 +109,6 @@ EDirection ARouteActor::BuildTemplateSnake(EDirection InForwardDirection, float 
 		StartPointIndex = 0;
 	}
 	
-	//TODO: Здесь должна быть проверка на "положительность" индекса.
 	RouteSpline->GetLocationAndTangentAtSplinePoint(StartPointIndex, PointLocation, PointTangent, ESplineCoordinateSpace::World);
 
 	switch (ForwardDirection)
@@ -146,7 +145,7 @@ EDirection ARouteActor::BuildTemplateSnake(EDirection InForwardDirection, float 
 		PointLocation = FVector(PointLocation.X + LongCathetus, PointLocation.Y, PointLocation.Z);
 		RouteSpline->AddSplinePoint(PointLocation, ESplineCoordinateSpace::World);
 		// Debug
-		GEngine->AddOnScreenDebugMessage(-1, 10.f, FColor::Green, FString::Printf(TEXT("SnakeUp has builded.")));
+		//GEngine->AddOnScreenDebugMessage(-1, 10.f, FColor::Green, FString::Printf(TEXT("SnakeUp has builded.")));
 		break;
 
 	case EDirection::Down:
@@ -181,7 +180,7 @@ EDirection ARouteActor::BuildTemplateSnake(EDirection InForwardDirection, float 
 		PointLocation = FVector(PointLocation.X - LongCathetus, PointLocation.Y, PointLocation.Z);
 		RouteSpline->AddSplinePoint(PointLocation, ESplineCoordinateSpace::World);
 		// Debug
-		GEngine->AddOnScreenDebugMessage(-1, 10.f, FColor::Green, FString::Printf(TEXT("SnakeDown has builded.")));
+		//GEngine->AddOnScreenDebugMessage(-1, 10.f, FColor::Green, FString::Printf(TEXT("SnakeDown has builded.")));
 		break;
 
 	case EDirection::Right:
@@ -216,7 +215,7 @@ EDirection ARouteActor::BuildTemplateSnake(EDirection InForwardDirection, float 
 		PointLocation = FVector(PointLocation.X, PointLocation.Y + LongCathetus, PointLocation.Z);
 		RouteSpline->AddSplinePoint(PointLocation, ESplineCoordinateSpace::World);
 		// Debug
-		GEngine->AddOnScreenDebugMessage(-1, 10.f, FColor::Green, FString::Printf(TEXT("SnakeRight has builded.")));
+		//GEngine->AddOnScreenDebugMessage(-1, 10.f, FColor::Green, FString::Printf(TEXT("SnakeRight has builded.")));
 		break;
 
 	case EDirection::Left:
@@ -251,7 +250,7 @@ EDirection ARouteActor::BuildTemplateSnake(EDirection InForwardDirection, float 
 		PointLocation = FVector(PointLocation.X, PointLocation.Y - LongCathetus, PointLocation.Z);
 		RouteSpline->AddSplinePoint(PointLocation, ESplineCoordinateSpace::World);
 		// Debug
-		GEngine->AddOnScreenDebugMessage(-1, 10.f, FColor::Green, FString::Printf(TEXT("SnakeLeft has builded.")));
+		//GEngine->AddOnScreenDebugMessage(-1, 10.f, FColor::Green, FString::Printf(TEXT("SnakeLeft has builded.")));
 		break;
 
 	default:
@@ -327,7 +326,7 @@ EDirection ARouteActor::BuildTemplateTurn(EDirection InForwardDirection, EDirect
 
 			ForwardDirection = EDirection::Down;
 			// Debug
-			GEngine->AddOnScreenDebugMessage(-1, 10.f, FColor::Green, FString::Printf(TEXT("TurnUpRightDown has builded.")));
+			//GEngine->AddOnScreenDebugMessage(-1, 10.f, FColor::Green, FString::Printf(TEXT("TurnUpRightDown has builded.")));
 			break;
 		
 		case EDirection::Left:
@@ -353,7 +352,7 @@ EDirection ARouteActor::BuildTemplateTurn(EDirection InForwardDirection, EDirect
 
 			ForwardDirection = EDirection::Down;
 			// Debug
-			GEngine->AddOnScreenDebugMessage(-1, 10.f, FColor::Green, FString::Printf(TEXT("TurnUpLeftDown has builded.")));
+			//GEngine->AddOnScreenDebugMessage(-1, 10.f, FColor::Green, FString::Printf(TEXT("TurnUpLeftDown has builded.")));
 			break;
 
 		default:
@@ -388,7 +387,7 @@ EDirection ARouteActor::BuildTemplateTurn(EDirection InForwardDirection, EDirect
 
 			ForwardDirection = EDirection::Up;
 			// Debug
-			GEngine->AddOnScreenDebugMessage(-1, 10.f, FColor::Green, FString::Printf(TEXT("TurnDownRightUp has builded.")));
+			//GEngine->AddOnScreenDebugMessage(-1, 10.f, FColor::Green, FString::Printf(TEXT("TurnDownRightUp has builded.")));
 			break;
 
 		case EDirection::Left:
@@ -414,7 +413,7 @@ EDirection ARouteActor::BuildTemplateTurn(EDirection InForwardDirection, EDirect
 
 			ForwardDirection = EDirection::Up;
 			// Debug
-			GEngine->AddOnScreenDebugMessage(-1, 10.f, FColor::Green, FString::Printf(TEXT("TurnDownLeftUp has builded.")));
+			//GEngine->AddOnScreenDebugMessage(-1, 10.f, FColor::Green, FString::Printf(TEXT("TurnDownLeftUp has builded.")));
 			break;
 
 		default:
@@ -449,7 +448,7 @@ EDirection ARouteActor::BuildTemplateTurn(EDirection InForwardDirection, EDirect
 
 			ForwardDirection = EDirection::Left;
 			// Debug
-			GEngine->AddOnScreenDebugMessage(-1, 10.f, FColor::Green, FString::Printf(TEXT("TurnRightUpLeft has builded.")));
+			//GEngine->AddOnScreenDebugMessage(-1, 10.f, FColor::Green, FString::Printf(TEXT("TurnRightUpLeft has builded.")));
 			break;
 
 		case EDirection::Down:
@@ -475,7 +474,7 @@ EDirection ARouteActor::BuildTemplateTurn(EDirection InForwardDirection, EDirect
 
 			ForwardDirection = EDirection::Left;
 			// Debug
-			GEngine->AddOnScreenDebugMessage(-1, 10.f, FColor::Green, FString::Printf(TEXT("TurnRightDownLeft has builded.")));
+			//GEngine->AddOnScreenDebugMessage(-1, 10.f, FColor::Green, FString::Printf(TEXT("TurnRightDownLeft has builded.")));
 			break;
 
 		default:
@@ -510,7 +509,7 @@ EDirection ARouteActor::BuildTemplateTurn(EDirection InForwardDirection, EDirect
 
 			ForwardDirection = EDirection::Right;
 			// Debug
-			GEngine->AddOnScreenDebugMessage(-1, 10.f, FColor::Green, FString::Printf(TEXT("TurnLeftUpRight has builded.")));
+			//GEngine->AddOnScreenDebugMessage(-1, 10.f, FColor::Green, FString::Printf(TEXT("TurnLeftUpRight has builded.")));
 			break;
 
 		case EDirection::Down:
@@ -536,7 +535,7 @@ EDirection ARouteActor::BuildTemplateTurn(EDirection InForwardDirection, EDirect
 
 			ForwardDirection = EDirection::Right;
 			// Debug
-			GEngine->AddOnScreenDebugMessage(-1, 10.f, FColor::Green, FString::Printf(TEXT("TurnLeftDownRight has builded.")));
+			//GEngine->AddOnScreenDebugMessage(-1, 10.f, FColor::Green, FString::Printf(TEXT("TurnLeftDownRight has builded.")));
 			break;
 
 		default:
@@ -594,32 +593,36 @@ EDirection ARouteActor::BuildTemplateFiller(EDirection InForwardDirection, float
 		RouteSpline->AddSplinePoint(PointLocation, ESplineCoordinateSpace::World);
 
 		// Debug
-		GEngine->AddOnScreenDebugMessage(-1, 10.f, FColor::Green, FString::Printf(TEXT("FillerUp has builded.")));
+		//GEngine->AddOnScreenDebugMessage(-1, 10.f, FColor::Green, FString::Printf(TEXT("FillerUp has builded.")));
 		break;
+
 	case EDirection::Down:
 		// 1 Ребро вверх.
 		PointLocation = FVector(PointLocation.X - ForvardStep, PointLocation.Y, PointLocation.Z);
 		RouteSpline->AddSplinePoint(PointLocation, ESplineCoordinateSpace::World);
 
 		// Debug
-		GEngine->AddOnScreenDebugMessage(-1, 10.f, FColor::Green, FString::Printf(TEXT("FillerDown has builded.")));
+		//GEngine->AddOnScreenDebugMessage(-1, 10.f, FColor::Green, FString::Printf(TEXT("FillerDown has builded.")));
 		break;
+
 	case EDirection::Right:
 		// 1 Ребро вверх.
 		PointLocation = FVector(PointLocation.X, PointLocation.Y + ForvardStep, PointLocation.Z);
 		RouteSpline->AddSplinePoint(PointLocation, ESplineCoordinateSpace::World);
 
 		// Debug
-		GEngine->AddOnScreenDebugMessage(-1, 10.f, FColor::Green, FString::Printf(TEXT("FillerRight has builded.")));
+		//GEngine->AddOnScreenDebugMessage(-1, 10.f, FColor::Green, FString::Printf(TEXT("FillerRight has builded.")));
 		break;
+
 	case EDirection::Left:
 		// 1 Ребро вверх.
 		PointLocation = FVector(PointLocation.X, PointLocation.Y - ForvardStep, PointLocation.Z);
 		RouteSpline->AddSplinePoint(PointLocation, ESplineCoordinateSpace::World);
 
 		// Debug
-		GEngine->AddOnScreenDebugMessage(-1, 10.f, FColor::Green, FString::Printf(TEXT("FillerLeft has builded.")));
+		//GEngine->AddOnScreenDebugMessage(-1, 10.f, FColor::Green, FString::Printf(TEXT("FillerLeft has builded.")));
 		break;
+
 	default:
 		break;
 	}

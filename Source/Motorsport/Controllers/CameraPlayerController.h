@@ -4,6 +4,9 @@
 
 #include "CoreMinimal.h"
 #include "GameFramework/PlayerController.h"
+
+#include "MachineSpirit.h"
+
 #include "CameraPlayerController.generated.h"
 
 class AStaticMeshActor;
@@ -11,6 +14,8 @@ class ACameraPlayerPawn;
 class AMotorsportGameModeBase;
 
 class ARouteActor;
+class ALandraider;
+class AMachineSpirit;
 
 UCLASS()
 class MOTORSPORT_API ACameraPlayerController : public APlayerController
@@ -35,6 +40,15 @@ private:
 	UPROPERTY()
 	AMotorsportGameModeBase* GameMode = nullptr;
 
+	UPROPERTY()
+	ALandraider* CurrentLandraider = nullptr;
+
+	UPROPERTY()
+	AMachineSpirit* CurrentMachineSpirit = nullptr;
+
+	UPROPERTY()
+	EMachineSpiritState CurrentSpiritState = EMachineSpiritState::Sleeps;
+
 	void MouseLeftClick();
 
 	void MouseLeftReleased();
@@ -44,6 +58,15 @@ private:
 	void ZoomOut();
 
 	FVector MoveScreen();
+
+	// TestMovement
+	void GetLandraider();
+	void LandraiderMoveForward();
+	void LandraiderMoveBack();
+	void LandraiderBrake();
+	void LandraiderIdle();
+	void LandraiderTurnRight();
+	void LandraiderTurnLeft();
 
 protected:
 
@@ -65,6 +88,9 @@ protected:
 	// явно не на своЄм месте, но ничего не поделаешь.
 	UPROPERTY(EditDefaultsOnly, Category = "Obstacles")
 	TSubclassOf<AStaticMeshActor> ObstacleClass;
+
+	UFUNCTION(BlueprintCallable)
+	void SetCurrentMachineSpiritState();
 
 	// Called when the game starts or when spawned
 	virtual void BeginPlay() override;

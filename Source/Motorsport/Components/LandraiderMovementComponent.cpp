@@ -23,6 +23,8 @@ void ULandraiderMovementComponent::FullThrottle(float InputIntensity)
 	{
 		InputIntensity *= -1.f;
 	}
+	
+	
 	// Если произошла смена направления движения, то сначала снижаем скорость до нуля, а потом уже разгоняемся.
 	if (CurrentSpeed < 0.f)
 	{
@@ -165,10 +167,20 @@ void ULandraiderMovementComponent::MoveForward()
 
 void ULandraiderMovementComponent::CalculateTurnRate(float TurnRateInput)
 {
-	// Чем выше скорость - тем сложнее повернуть.
-	
-	
-	//CurrentTurnRate = MaxTurnSpeed * 
+	//float RotateAmount = Value * RotateSpeed * GetWorld()->DeltaTimeSeconds;
+	//FRotator Rotation = FRotator(0, RotateAmount, 0);
+	//RotationDirection = FQuat(Rotation);
+
+	if (CurrentSpeed != 0.f)
+	{
+		CurrentTurnRate = TurnRateInput * MaxTurnRate * FMath::Clamp(1.f - (abs(CurrentSpeed) / MaxMoveSpeed), 0.1f, 1.f);
+		FRotator Rotation = FRotator(0, CurrentTurnRate, 0);
+		CurrentTurn = FQuat(Rotation);
+	}
+	else
+	{
+		CurrentTurn = FQuat(FVector(0.f, 0.f, 0.f), 0.f);
+	}
 }
 
 void ULandraiderMovementComponent::Turn()
@@ -203,7 +215,7 @@ float ULandraiderMovementComponent::SetDriveAction(EDriveAction Action, float In
 		ReverseGear(ThrottleInput);
 		break;
 	
-	case EDriveAction::IdleMoveing:
+	case EDriveAction::IdleMoving:
 		IdleMoving();
 		break;
 	
@@ -220,19 +232,7 @@ float ULandraiderMovementComponent::SetDriveAction(EDriveAction Action, float In
 
 FQuat ULandraiderMovementComponent::Steering(float TurnRateInput)
 {
-	//float RotateAmount = Value * RotateSpeed * GetWorld()->DeltaTimeSeconds;
-	//FRotator Rotation = FRotator(0, RotateAmount, 0);
-	//RotationDirection = FQuat(Rotation);
-	if (CurrentSpeed != 0.f)
-	{
-		CurrentTurnRate = MaxTurnRate * FMath::Clamp(1.f - (abs(CurrentSpeed) / MaxMoveSpeed), 0.1f, 1.f);
-		FRotator Rotation = FRotator(0, CurrentTurnRate, 0);
-		CurrentTurn = FQuat(Rotation);
-	}
-	else
-	{
-		CurrentTurn = FQuat(FVector(0.f, 0.f, 0.f), 0.f);
-	}
+	void CalculateTurnRate(float TurnRateInput);
 
 	return CurrentTurn;
 }
@@ -242,6 +242,7 @@ void ULandraiderMovementComponent::TickComponent(float DeltaTime, ELevelTick Tic
 {
 	Super::TickComponent(DeltaTime, TickType, ThisTickFunction);
 
-	// ...
+	MoveForward();
+	Turn();
 }
 

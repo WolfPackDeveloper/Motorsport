@@ -12,7 +12,7 @@ enum class EDriveAction : uint8
 {
 	FullThrottle,
 	ReverseGear,
-	IdleMoveing,
+	IdleMoving,
 	Braking
 };
 
@@ -27,11 +27,8 @@ public:
 
 private:
 
-//	FVector MoveDirection;
 	FQuat CurrentTurn;
-	//APawn* Landraider = nullptr;
-
-	EDriveAction CurrentDriveAction = EDriveAction::IdleMoveing;
+	EDriveAction CurrentDriveAction = EDriveAction::IdleMoving;
 
 	float CurrentSpeed = 0.f;
 	float CurrentTurnSpeed = 0.f;
@@ -40,9 +37,6 @@ private:
 
 	bool bFullThrottle = false;
 	bool bIsBraking = false;
-	
-//	void CalculateRotateInput(float Value);
-
 
 	// Move Behaviour
 	void FullThrottle(float InputIntensity);
@@ -78,7 +72,6 @@ protected:
 	// Максимальное ускорение
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Movement")
 	float MaxAccelerationSpeed = 2.f;
-
 
 	//Время остановки
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Movement")
