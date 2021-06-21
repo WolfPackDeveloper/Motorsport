@@ -99,92 +99,51 @@ void ACameraPlayerController::GetLandraider()
 	}
 	if (IsValid(CurrentLandraider))
 	{
-
 		CurrentMachineSpirit = Cast<AMachineSpirit>(CurrentLandraider->GetController());
 	}
 }
 
 void ACameraPlayerController::LandraiderMoveForward()
 {
-	if (!IsValid(CurrentLandraider))
-	{
-		GetLandraider();
-	}
-	else
-	{
-		CurrentLandraider->GetMovementComponent()->SetDriveAction(EDriveAction::FullThrottle, 1.f);
-	}
+
 }
 
 void ACameraPlayerController::LandraiderMoveBack()
 {
-	if (!IsValid(CurrentLandraider))
-	{
-		GetLandraider();
-	}
-	else
-	{
-		CurrentLandraider->GetMovementComponent()->SetDriveAction(EDriveAction::ReverseGear, 1.f);
-	}
+
 }
 
 void ACameraPlayerController::LandraiderBrake()
 {
-	if (!IsValid(CurrentLandraider) || !IsValid(CurrentMachineSpirit))
-	{
-		GetLandraider();
-	}
-	else
-	{
-		CurrentLandraider->GetMovementComponent()->SetDriveAction(EDriveAction::Braking, 1.f);
-	}
+
 }
 
 void ACameraPlayerController::LandraiderIdle()
 {
-	if (!IsValid(CurrentLandraider) || !IsValid(CurrentMachineSpirit))
-	{
-		GetLandraider();
-	}
-	else
-	{
-		CurrentLandraider->GetMovementComponent()->SetDriveAction(EDriveAction::IdleMoving, 1.f);
-	}
+
 }
 
 void ACameraPlayerController::LandraiderTurnRight()
 {
-	if (!IsValid(CurrentLandraider))
-	{
-		GetLandraider();
-	}
-	else
-	{
-		CurrentLandraider->GetMovementComponent()->Steering(1.f);
-	}
+
 }
 
 void ACameraPlayerController::LandraiderTurnLeft()
 {
-	if (!IsValid(CurrentLandraider))
-	{
-		GetLandraider();
-	}
-	else
-	{
-		CurrentLandraider->GetMovementComponent()->Steering(-1.f);
-	}
+
 }
 
+// TODO: Надо было делать делегатом.(
 void ACameraPlayerController::SetCurrentMachineSpiritState()
 {
-	if (!IsValid(CurrentLandraider))
+	if (!IsValid(CurrentLandraider) || !IsValid(CurrentMachineSpirit))
 	{
-		GetLandraider();
+		CurrentLandraider = Cast<ALandraider>(GameMode->GetMachineActor());
+		CurrentMachineSpirit = Cast<AMachineSpirit>(CurrentLandraider->GetController());
 	}
 	else
 	{
-		CurrentSpiritState = CurrentMachineSpirit->GetSpiritState();
+		CurrentSpiritState = CurrentMachineSpirit->GetMachineSpiritState();
 
 		switch (CurrentSpiritState)
 		{
@@ -219,7 +178,11 @@ void ACameraPlayerController::BeginPlay()
 	PlayerCamera = Cast<ACameraPlayerPawn>(GetPawn());
 	GameMode = Cast<AMotorsportGameModeBase>(UGameplayStatics::GetGameMode(GetWorld()));
 	// Возня для тестов движения и включения-выключения Духа Машины.
-	GetLandraider();
+	CurrentLandraider = Cast<ALandraider>(GameMode->GetMachineActor());
+	if (IsValid(CurrentLandraider))
+	{
+		CurrentMachineSpirit = Cast<AMachineSpirit>(CurrentLandraider->GetController());
+	}
 }
 
 void ACameraPlayerController::SpawnObstacle()

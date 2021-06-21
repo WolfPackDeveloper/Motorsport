@@ -3,6 +3,7 @@
 
 #include "LandraiderMovementComponent.h"
 
+#include "Engine/Engine.h" // Debug strings
 #include "Engine/World.h" // GetWorld
 #include "GameFramework/Actor.h" // Owner
 
@@ -13,7 +14,6 @@ ULandraiderMovementComponent::ULandraiderMovementComponent()
 	// Set this component to be initialized when the game starts, and to be ticked every frame.  You can turn these features
 	// off to improve performance if you don't need them.
 	PrimaryComponentTick.bCanEverTick = true;
-
 }
 
 void ULandraiderMovementComponent::FullThrottle(float InputIntensity)
@@ -24,7 +24,8 @@ void ULandraiderMovementComponent::FullThrottle(float InputIntensity)
 		InputIntensity *= -1.f;
 	}
 	
-	
+	if (CurrentSpeed == MaxMoveSpeed * InputIntensity) return;
+
 	// Если произошла смена направления движения, то сначала снижаем скорость до нуля, а потом уже разгоняемся.
 	if (CurrentSpeed < 0.f)
 	{
@@ -38,16 +39,10 @@ void ULandraiderMovementComponent::FullThrottle(float InputIntensity)
 	}
 	else
 	{
-		// Условное переключение между направлениями движения сопровождается сбросом "ускорения торможения" последующим набором "ускорения движения".
-		if (CurrentSpeed <= SpeedChangeStep && SpeedChangeStep != AccelerationStep)
-		{
-			SpeedChangeStep = 0.f;
-		}
-		
 		SpeedChangeStep = FMath::Clamp(SpeedChangeStep + AccelerationStep, 0.f, MaxAccelerationSpeed);
 	}
 	
-	CurrentSpeed = (CurrentSpeed + SpeedChangeStep) * GetWorld()->GetDeltaSeconds();
+	CurrentSpeed += SpeedChangeStep;
 	// Неизвестно с какой скорости начиналось, поэтому берём максимальный задний ход в качестве нижней границы.
 	// В качестве верхней - долю от максимальной, соответствующую интенсивности нажатия педальки.
 	FMath::Clamp(CurrentSpeed, MaxReverseSpeed, MaxMoveSpeed * InputIntensity);
@@ -55,14 +50,15 @@ void ULandraiderMovementComponent::FullThrottle(float InputIntensity)
 
 void ULandraiderMovementComponent::ReverseGear(float InputIntensity)
 {
-	// Поддерживаем нужную скорость.
-	if (CurrentSpeed == MaxReverseSpeed * InputIntensity) return;
-	
 	// На случай ошибки вектора.
 	if (InputIntensity < 0.f)
 	{
 		InputIntensity *= -1.f;
 	}
+
+	// Поддерживаем нужную скорость.
+	if (CurrentSpeed == MaxReverseSpeed * InputIntensity) return;
+
 	// Если произошла смена направления движения, то сначала снижаем скорость до нуля, а потом уже разгоняемся назад.
 	if (CurrentSpeed > 0.f)
 	{
@@ -73,19 +69,12 @@ void ULandraiderMovementComponent::ReverseGear(float InputIntensity)
 		}
 		// Тормозим, пока не поменяется направление движения.
 		SpeedChangeStep = FMath::Clamp(SpeedChangeStep + BrakingStep, 0.f, MaxAccelerationSpeed);
-
-		CurrentSpeed = (CurrentSpeed - SpeedChangeStep) * GetWorld()->GetDeltaSeconds();
+		CurrentSpeed -= SpeedChangeStep;
 	}
 	else
 	{
-		// Условное переключение между направлениями движения сопровождается сбросом "ускорения торможения" последующим набором "ускорения движения".
-		if (CurrentSpeed >= -SpeedChangeStep && SpeedChangeStep != -AccelerationStep)
-		{
-			SpeedChangeStep = 0.f;
-		}
-
 		SpeedChangeStep = FMath::Clamp(SpeedChangeStep - AccelerationStep, MaxAccelerationSpeed, 0.f);
-		CurrentSpeed = (CurrentSpeed + SpeedChangeStep) * GetWorld()->GetDeltaSeconds();
+		CurrentSpeed += SpeedChangeStep;
 	}
 
 	FMath::Clamp(CurrentSpeed, MaxReverseSpeed * InputIntensity, MaxMoveSpeed);
@@ -106,8 +95,8 @@ void ULandraiderMovementComponent::IdleMoving()
 		}
 		// "Повышаем" обратную скорость до нуля.
 		SpeedChangeStep = FMath::Clamp(SpeedChangeStep + IdleSpeedFadingStep, MaxAccelerationSpeed, 0.f);
-		CurrentSpeed = (CurrentSpeed + SpeedChangeStep) * GetWorld()->GetDeltaSeconds();
-		
+		CurrentSpeed += SpeedChangeStep;
+
 		FMath::Clamp(CurrentSpeed, MaxReverseSpeed, 0.f);
 	}
 	// Катимся вперёд.
@@ -119,7 +108,7 @@ void ULandraiderMovementComponent::IdleMoving()
 		}
 		// "Понижаем" скорость до нуля.
 		SpeedChangeStep = FMath::Clamp(SpeedChangeStep + IdleSpeedFadingStep, 0.f, MaxAccelerationSpeed);
-		CurrentSpeed = (CurrentSpeed - SpeedChangeStep) * GetWorld()->GetDeltaSeconds();
+		CurrentSpeed -= SpeedChangeStep;
 
 		FMath::Clamp(CurrentSpeed, 0.f, MaxMoveSpeed);
 	}
@@ -140,7 +129,8 @@ void ULandraiderMovementComponent::Braking()
 		}
 		// Набираем "ускорение ториожения" и тормозим.
 		SpeedChangeStep = FMath::Clamp(SpeedChangeStep + BrakingStep, 0.f, MaxAccelerationSpeed);
-		CurrentSpeed = (CurrentSpeed + SpeedChangeStep) * GetWorld()->GetDeltaSeconds();
+		CurrentSpeed += SpeedChangeStep;
+
 		FMath::Clamp(CurrentSpeed, MaxReverseSpeed, 0.f);
 	}
 	// Тормозим переднюю скорость.
@@ -153,39 +143,44 @@ void ULandraiderMovementComponent::Braking()
 		}
 		// Набираем "ускорение ториожения" и тормозим.
 		SpeedChangeStep = FMath::Clamp(SpeedChangeStep - BrakingStep, -MaxAccelerationSpeed, 0.f);
-		CurrentSpeed = (CurrentSpeed + SpeedChangeStep) * GetWorld()->GetDeltaSeconds();
+		CurrentSpeed -= SpeedChangeStep;
+
 		FMath::Clamp(CurrentSpeed, MaxReverseSpeed, 0.f);
 	}
 }
 
-
-
 void ULandraiderMovementComponent::MoveForward()
 {
-	GetOwner()->AddActorLocalOffset(FVector(CurrentSpeed, 0.f, 0.f), true);
+	FVector CurrentLocation = GetOwner()->GetActorLocation();
+	FVector TargetLocation = CurrentLocation + (GetOwner()->GetActorForwardVector() * CurrentSpeed);
+	FVector NewLocation = FMath::VInterpTo(CurrentLocation, TargetLocation, GetWorld()->GetDeltaSeconds(), 1.f);
+	GetOwner()->SetActorLocation(NewLocation);
 }
 
 void ULandraiderMovementComponent::CalculateTurnRate(float TurnRateInput)
 {
-	//float RotateAmount = Value * RotateSpeed * GetWorld()->DeltaTimeSeconds;
-	//FRotator Rotation = FRotator(0, RotateAmount, 0);
-	//RotationDirection = FQuat(Rotation);
-
 	if (CurrentSpeed != 0.f)
 	{
 		CurrentTurnRate = TurnRateInput * MaxTurnRate * FMath::Clamp(1.f - (abs(CurrentSpeed) / MaxMoveSpeed), 0.1f, 1.f);
-		FRotator Rotation = FRotator(0, CurrentTurnRate, 0);
-		CurrentTurn = FQuat(Rotation);
+		//FRotator Rotation = FRotator(0, CurrentTurnRate, 0);
+		//CurrentTurn = FQuat(Rotation);
+		CurrentTurn = FRotator(0, CurrentTurnRate, 0);
 	}
 	else
 	{
-		CurrentTurn = FQuat(FVector(0.f, 0.f, 0.f), 0.f);
+		//CurrentTurn = FQuat(FVector(0.f, 0.f, 0.f), 0.f);
+		CurrentTurn = FRotator(0.f, 0.f, 0.f);
 	}
+
+	//Debug
+	GEngine->AddOnScreenDebugMessage(-1, 0.f, FColor::Cyan, FString::Printf(TEXT("MovementComponent: Currnt turn: %s"), *CurrentTurn.ToString()));
 }
 
 void ULandraiderMovementComponent::Turn()
 {
-	GetOwner()->AddActorLocalRotation(CurrentTurn, true);
+	FRotator Rotation = GetOwner()->GetActorRotation();
+	FRotator SetTurn = FMath::RInterpTo(Rotation, Rotation + CurrentTurn, GetWorld()->GetDeltaSeconds(), 1.f);
+	GetOwner()->SetActorRotation(SetTurn);
 }
 
 void ULandraiderMovementComponent::Skidding()
@@ -197,6 +192,26 @@ void ULandraiderMovementComponent::Skidding()
 void ULandraiderMovementComponent::BeginPlay()
 {
 	Super::BeginPlay();
+}
+
+float ULandraiderMovementComponent::GetCurrentSpeed() const
+{
+	return CurrentSpeed;
+}
+
+float ULandraiderMovementComponent::GetMaxSpeed() const
+{
+	return MaxMoveSpeed;
+}
+
+float ULandraiderMovementComponent::GetMaxReverseSpeed() const
+{
+	return MaxReverseSpeed;
+}
+
+float ULandraiderMovementComponent::GetMaxTurnRate() const
+{
+	return MaxTurnRate;
 }
 
 float ULandraiderMovementComponent::SetDriveAction(EDriveAction Action, float InputIntensity)
@@ -227,12 +242,15 @@ float ULandraiderMovementComponent::SetDriveAction(EDriveAction Action, float In
 		break;
 	}
 
+	MoveForward();
+
 	return CurrentSpeed;
 }
 
-FQuat ULandraiderMovementComponent::Steering(float TurnRateInput)
+FRotator ULandraiderMovementComponent::Steering(float TurnRateInput)
 {
-	void CalculateTurnRate(float TurnRateInput);
+	CalculateTurnRate(TurnRateInput);
+	Turn();
 
 	return CurrentTurn;
 }
@@ -241,8 +259,5 @@ FQuat ULandraiderMovementComponent::Steering(float TurnRateInput)
 void ULandraiderMovementComponent::TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction)
 {
 	Super::TickComponent(DeltaTime, TickType, ThisTickFunction);
-
-	MoveForward();
-	Turn();
 }
 

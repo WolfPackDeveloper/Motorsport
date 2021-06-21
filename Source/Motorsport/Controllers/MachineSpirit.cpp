@@ -11,15 +11,39 @@
 #include "Engine/Engine.h" // Debug strings
 #include "Engine/World.h" // GetWorld
 #include "Kismet/GameplayStatics.h" // GetGameMode - Получаем ГеймМод! Вот и не нужны мне ваши раковины!
+#include "Kismet/KismetMathLibrary.h" // LookAtRotation
 #include "Kismet/KismetSystemLibrary.h" // Trace
 #include "Math/Box.h"
 
 
 AMachineSpirit::AMachineSpirit()
 {
+	PrimaryActorTick.bStartWithTickEnabled = true;
+	PrimaryActorTick.bCanEverTick = true;
+	
 	SpiritState = EMachineSpiritState::Sleeps;
-	//SteerBehaviour = ESteerBehaviour::Wait;
-	GroundBounds = FVector();
+	GroundBounds = FVector(0.f, 0.f, 0.f);
+
+	// Карты "опасности" препятствий: Лв(0), ЛП(1), П(2), ПП(3), Пр(4).
+	for (int i = 0; i < 5; ++i)
+	{
+		// Мутновато...
+		ThreatMap.Add(FThreatInstigator());
+	}
+
+	// Карта "весов" препятствий (Лв, ЛП, П, ПП, Пр), границ и маршрута.
+	WeightMap.Add(TEXT("Left"), 0.f);
+	WeightMap.Add(TEXT("LeftForward"), 0.f);
+	WeightMap.Add(TEXT("Forward"), 0.f);
+	WeightMap.Add(TEXT("RightForward"), 0.f);
+	WeightMap.Add(TEXT("Right"), 0.f);
+	WeightMap.Add(TEXT("Route"), 0.f);
+	WeightMap.Add(TEXT("Bounds"), 0.f);
+
+	// Карта "весов" направлений: Лв(0), П(1), Пр(2).
+	DirectionWeightMap.Add(FDirectionWeight{ ESteerDirection::Left, 0.f });
+	DirectionWeightMap.Add(FDirectionWeight{ ESteerDirection::Forward, 0.f });
+	DirectionWeightMap.Add(FDirectionWeight{ ESteerDirection::Right, 0.f });
 }
 
 FVector AMachineSpirit::GetOwnedPawnDimensions()
@@ -31,7 +55,7 @@ FVector AMachineSpirit::GetOwnedPawnDimensions()
 
 		OwnedLandraider->GetActorBounds(true, Origin, Extent);
 
-		return Extent - Origin;
+		return Extent * 2.f;
 	}
 
 	return FVector();
@@ -47,7 +71,7 @@ void AMachineSpirit::Throttle(float InputIntensity)
 {
 	if (IsValid(OwnedLandraider))
 	{
-		OwnedLandraider->GetMovementComponent()->SetDriveAction(EDriveAction::FullThrottle, InputIntensity);
+		OwnedLandraider->GetLandraiderMovementComponent()->SetDriveAction(EDriveAction::FullThrottle, InputIntensity);
 	}
 }
 
@@ -55,7 +79,7 @@ void AMachineSpirit::ReverseGear(float InputIntensity)
 {
 	if (IsValid(OwnedLandraider))
 	{
-		OwnedLandraider->GetMovementComponent()->SetDriveAction(EDriveAction::ReverseGear, InputIntensity);
+		OwnedLandraider->GetLandraiderMovementComponent()->SetDriveAction(EDriveAction::ReverseGear, InputIntensity);
 	}
 }
 
@@ -63,7 +87,7 @@ void AMachineSpirit::Brake(float InputIntensity)
 {
 	if (IsValid(OwnedLandraider))
 	{
-		OwnedLandraider->GetMovementComponent()->SetDriveAction(EDriveAction::Braking, InputIntensity);
+		OwnedLandraider->GetLandraiderMovementComponent()->SetDriveAction(EDriveAction::Braking, InputIntensity);
 	}
 }
 
@@ -71,7 +95,7 @@ void AMachineSpirit::IdleMoving(float InputIntensity)
 {
 	if (IsValid(OwnedLandraider))
 	{
-		OwnedLandraider->GetMovementComponent()->SetDriveAction(EDriveAction::IdleMoving, InputIntensity);
+		OwnedLandraider->GetLandraiderMovementComponent()->SetDriveAction(EDriveAction::IdleMoving, InputIntensity);
 	}
 }
 
@@ -79,48 +103,27 @@ void AMachineSpirit::TurnRight(float InputIntensity)
 {
 	if (IsValid(OwnedLandraider))
 	{
-		OwnedLandraider->GetMovementComponent()->Steering(InputIntensity);
+		OwnedLandraider->GetLandraiderMovementComponent()->Steering(InputIntensity);
 	}
 }
-
-//void AMachineSpirit::BuildRoute()
-//{
-//	if (!GameMode) return;
-//	CurrentRoute = GameMode->GetRouteActor();
-//
-//	if (IsValid(CurrentRoute))
-//	{
-//		SteerBehaviour = ESteerBehaviour::FollowTheRoute;
-//		CurrentRoutePointIndex = 0;
-//	}
-//	else
-//	{
-//		SteerBehaviour = ESteerBehaviour::Explore;
-//	}
-//}
-
-//void AMachineSpirit::ExploreSteerBehaviour()
-//{
-//	if (!IsValid(OwnedLandraider)) return;
-//
-//	// "Трассировка" границы
-//	TraceGroundBounds();
-//
-//	// Определить вес "текущей точки маршрута" приближении к границам.
-//
-//
-//
-//}
 
 void AMachineSpirit::BeginPlay()
 {
 	Super::BeginPlay();
 
+	SpiritState = EMachineSpiritState::Sleeps;
+
 	GameMode = Cast<AMotorsportGameModeBase>(UGameplayStatics::GetGameMode(GetWorld()));
 	if (IsValid(GameMode))
 	{
 		CurrentRoute = GameMode->GetRouteActor();
+		GroundBounds = GameMode->GetGroundBounds();
 	}
+}
+
+void AMachineSpirit::OnPossess(APawn* InPawn)
+{
+	Super::OnPossess(InPawn);
 
 	OwnedLandraider = Cast<ALandraider>(GetPawn());
 
@@ -128,19 +131,30 @@ void AMachineSpirit::BeginPlay()
 	{
 		PawnDimensions = GetOwnedPawnDimensions();
 	}
+}
 
-	//BuildRoute();
+void AMachineSpirit::OnUnPossess()
+{
+	Super::OnUnPossess();
 }
 
 void AMachineSpirit::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
-	
-	if (SpiritState == EMachineSpiritState::Awake)
+
+	switch (SpiritState)
 	{
-
+	case EMachineSpiritState::Awake:
+		DefineSteerBehaviour();
+		break;
+	
+	case EMachineSpiritState::Sleeps:
+		
+		break;
+	
+	default:
+		break;
 	}
-
 }
 
 void AMachineSpirit::TraceLeft()
@@ -148,16 +162,16 @@ void AMachineSpirit::TraceLeft()
 	TArray<AActor*> ActorsToIgnore;
 	ActorsToIgnore.Add(OwnedLandraider);
 	float Distance = 0; // Расстояние до точки столкновения луча с препятствием. Для расчёта уровня угрозы.
-	FVector TraceStart;
-	FVector TraceEnd;
 
-	float X = OwnedLandraider->GetActorForwardVector().X;
-	float Y = OwnedLandraider->GetActorForwardVector().Y - ((1 / 2) * PawnDimensions.Y);
-	float Z = OwnedLandraider->GetActorForwardVector().Z;
-	TraceStart = FVector(X, Y, Z);
-	// Можно, конечно, посчитать длину по X... Но морока с углом...
-	// Наверняка есть какая-нибудь хитрость с кватернионами, но, селяви.
-	TraceEnd = FVector(TraceStart.X + TraceLength - PawnDimensions.X, TraceStart.Y - ((1 / 2) * PawnDimensions.Y), TraceStart.Z);
+	float DeltaX = PawnDimensions.X / 2;
+	float DeltaY = PawnDimensions.Y / 2;
+	FVector ForwardVector = OwnedLandraider->GetActorForwardVector();
+	FVector RightVector = OwnedLandraider->GetActorRightVector();
+	FVector TraceStart = OwnedLandraider->GetActorLocation() + (ForwardVector * DeltaX) - (RightVector * DeltaY);
+	FVector TraceEnd = TraceStart + (ForwardVector * TraceLength) - (RightVector * 3.f * DeltaY);
+
+	//GEngine->AddOnScreenDebugMessage(-1, 0.f, FColor::Red, FString::Printf(TEXT("MachineSpirit: Trace left start vector: %s"), *TraceStart.ToString()));
+
 	FHitResult HitResult;
 
 	bool Hit = UKismetSystemLibrary::LineTraceSingle(
@@ -172,12 +186,13 @@ void AMachineSpirit::TraceLeft()
 		true,
 		FLinearColor::Green,
 		FLinearColor::Red,
-		5.f
+		0.1f
 	);
 
 	if (Hit)
 	{
 		Distance = sqrtf(powf(HitResult.Location.X - TraceStart.X, 2.f) + powf(HitResult.Location.Y - TraceStart.Y, 2.f));
+		
 		ThreatMap[0].Obstacle = HitResult.GetActor();
 		ThreatMap[0].ThreatValue = 1 - (Distance / TraceLength);
 	}
@@ -186,6 +201,9 @@ void AMachineSpirit::TraceLeft()
 		ThreatMap[0].Obstacle = nullptr;
 		ThreatMap[0].ThreatValue = 0.f;
 	}
+
+	//Debug
+	//GEngine->AddOnScreenDebugMessage(-1, 0.f, FColor::Red, FString::Printf(TEXT("MachineSpirit: Left Threat: %f"), ThreatMap[0].ThreatValue));
 }
 
 void AMachineSpirit::TraceForwardLeft()
@@ -193,13 +211,14 @@ void AMachineSpirit::TraceForwardLeft()
 	TArray<AActor*> ActorsToIgnore;
 	ActorsToIgnore.Add(OwnedLandraider);
 	float Distance = 0; // Расстояние до точки столкновения луча с препятствием. Для расчёта уровня угрозы.
-	FVector TraceStart;
-	FVector TraceEnd;
-	float X = OwnedLandraider->GetActorForwardVector().X;
-	float Y = OwnedLandraider->GetActorForwardVector().Y - ((1 / 2) * PawnDimensions.Y);
-	float Z = OwnedLandraider->GetActorForwardVector().Z;
-	TraceStart = FVector(X, Y, Z);
-	TraceEnd = FVector(TraceStart.X + TraceLength, TraceStart.Y, TraceStart.Z);
+
+	float DeltaX = PawnDimensions.X / 2;
+	float DeltaY = PawnDimensions.Y / 2;
+	FVector ForwardVector = OwnedLandraider->GetActorForwardVector();
+	FVector RightVector = OwnedLandraider->GetActorRightVector();
+	FVector TraceStart = OwnedLandraider->GetActorLocation() + (ForwardVector * DeltaX) - (RightVector * DeltaY);
+	FVector TraceEnd = TraceStart + (ForwardVector * TraceLength) + (RightVector * 1.f);
+
 	FHitResult HitResult;
 
 	bool Hit = UKismetSystemLibrary::LineTraceSingle(
@@ -214,7 +233,7 @@ void AMachineSpirit::TraceForwardLeft()
 		true,
 		FLinearColor::Green,
 		FLinearColor::Red,
-		5.f
+		0.1f
 	);
 
 	if (Hit)
@@ -228,6 +247,8 @@ void AMachineSpirit::TraceForwardLeft()
 		ThreatMap[1].Obstacle = nullptr;
 		ThreatMap[1].ThreatValue = 0.f;
 	}
+	//Debug
+	//GEngine->AddOnScreenDebugMessage(-1, 0.f, FColor::Red, FString::Printf(TEXT("MachineSpirit: LeftForward Threat: %f"), ThreatMap[1].ThreatValue));
 }
 
 void AMachineSpirit::TraceForward()
@@ -235,8 +256,14 @@ void AMachineSpirit::TraceForward()
 	TArray<AActor*> ActorsToIgnore;
 	ActorsToIgnore.Add(OwnedLandraider);
 	float Distance = 0; // Расстояние до точки столкновения луча с препятствием. Для расчёта уровня угрозы.
-	FVector TraceStart = OwnedLandraider->GetActorForwardVector();
-	FVector TraceEnd = FVector(TraceStart.X + TraceLength, TraceStart.Y, TraceStart.Z);
+
+	float DeltaX = PawnDimensions.X / 2;
+	float DeltaY = 1.f;
+	FVector ForwardVector = OwnedLandraider->GetActorForwardVector();
+	FVector RightVector = OwnedLandraider->GetActorRightVector();
+	FVector TraceStart = OwnedLandraider->GetActorLocation() + (ForwardVector * DeltaX) + (RightVector * DeltaY);
+	FVector TraceEnd = TraceStart + (ForwardVector * TraceLength) + (RightVector * DeltaY);
+
 	FHitResult HitResult;
 
 	bool Hit = UKismetSystemLibrary::LineTraceSingle(
@@ -251,7 +278,7 @@ void AMachineSpirit::TraceForward()
 		true,
 		FLinearColor::Green,
 		FLinearColor::Red,
-		5.f
+		0.1f
 	);
 
 	if (Hit)
@@ -265,6 +292,9 @@ void AMachineSpirit::TraceForward()
 		ThreatMap[2].Obstacle = nullptr;
 		ThreatMap[2].ThreatValue = 0.f;
 	}
+	
+	//Debug
+	//GEngine->AddOnScreenDebugMessage(-1, 0.f, FColor::Red, FString::Printf(TEXT("MachineSpirit: Forward Threat: %f"), ThreatMap[2].ThreatValue));
 }
 
 void AMachineSpirit::TraceForwardRight()
@@ -272,13 +302,14 @@ void AMachineSpirit::TraceForwardRight()
 	TArray<AActor*> ActorsToIgnore;
 	ActorsToIgnore.Add(OwnedLandraider);
 	float Distance = 0; // Расстояние до точки столкновения луча с препятствием. Для расчёта уровня угрозы.
-	FVector TraceStart;
-	FVector TraceEnd;
-	float X = OwnedLandraider->GetActorForwardVector().X;
-	float Y = OwnedLandraider->GetActorForwardVector().Y + ((1 / 2) * PawnDimensions.Y);
-	float Z = OwnedLandraider->GetActorForwardVector().Z;
-	TraceStart = FVector(X, Y, Z);
-	TraceEnd = FVector(TraceStart.X + TraceLength, TraceStart.Y, TraceStart.Z);
+	
+	float DeltaX = PawnDimensions.X / 2;
+	float DeltaY = PawnDimensions.Y / 2;
+	FVector ForwardVector = OwnedLandraider->GetActorForwardVector();
+	FVector RightVector = OwnedLandraider->GetActorRightVector();
+	FVector TraceStart = OwnedLandraider->GetActorLocation() + (ForwardVector * DeltaX) + (RightVector * DeltaY);
+	FVector TraceEnd = TraceStart + (ForwardVector * TraceLength) - (RightVector * 1.f);
+
 	FHitResult HitResult;
 
 	bool Hit = UKismetSystemLibrary::LineTraceSingle(
@@ -293,20 +324,23 @@ void AMachineSpirit::TraceForwardRight()
 		true,
 		FLinearColor::Green,
 		FLinearColor::Red,
-		5.f
+		0.1f
 	);
 
 	if (Hit)
 	{
 		Distance = sqrtf(powf(HitResult.Location.X - TraceStart.X, 2.f) + powf(HitResult.Location.Y - TraceStart.Y, 2.f));
-		ThreatMap[1].Obstacle = HitResult.GetActor();
-		ThreatMap[1].ThreatValue = 1 - (Distance / TraceLength);
+		ThreatMap[3].Obstacle = HitResult.GetActor();
+		ThreatMap[3].ThreatValue = 1 - (Distance / TraceLength);
 	}
 	else
 	{
-		ThreatMap[1].Obstacle = nullptr;
-		ThreatMap[1].ThreatValue = 0.f;
+		ThreatMap[3].Obstacle = nullptr;
+		ThreatMap[3].ThreatValue = 0.f;
 	}
+
+	//Debug
+	//GEngine->AddOnScreenDebugMessage(-1, 0.f, FColor::Red, FString::Printf(TEXT("MachineSpirit: RightForward Threat: %f"), ThreatMap[3].ThreatValue));
 }
 
 void AMachineSpirit::TraceRight()
@@ -314,16 +348,14 @@ void AMachineSpirit::TraceRight()
 	TArray<AActor*> ActorsToIgnore;
 	ActorsToIgnore.Add(OwnedLandraider);
 	float Distance = 0; // Расстояние до точки столкновения луча с препятствием. Для расчёта уровня угрозы.
-	FVector TraceStart;
-	FVector TraceEnd;
+	
+	float DeltaX = PawnDimensions.X / 2;
+	float DeltaY = PawnDimensions.Y / 2;
+	FVector ForwardVector = OwnedLandraider->GetActorForwardVector();
+	FVector RightVector = OwnedLandraider->GetActorRightVector();
+	FVector TraceStart = OwnedLandraider->GetActorLocation() + (ForwardVector * DeltaX) + (RightVector * DeltaY);
+	FVector TraceEnd = TraceStart + (ForwardVector * TraceLength) + (RightVector * 3 * DeltaY);
 
-	float X = OwnedLandraider->GetActorForwardVector().X;
-	float Y = OwnedLandraider->GetActorForwardVector().Y + ((1 / 2) * PawnDimensions.Y);
-	float Z = OwnedLandraider->GetActorForwardVector().Z;
-	TraceStart = FVector(X, Y, Z);
-	// Можно, конечно, посчитать длину по X... Но морока с углом...
-	// Наверняка есть какая-нибудь хитрость с кватернионами, но, селяви.
-	TraceEnd = FVector(TraceStart.X + TraceLength - PawnDimensions.X, TraceStart.Y + ((1 / 2) * PawnDimensions.Y), TraceStart.Z);
 	FHitResult HitResult;
 
 	bool Hit = UKismetSystemLibrary::LineTraceSingle(
@@ -338,29 +370,33 @@ void AMachineSpirit::TraceRight()
 		true,
 		FLinearColor::Green,
 		FLinearColor::Red,
-		5.f
+		0.1f
 	);
 
 	if (Hit)
 	{
 		Distance = sqrtf(powf(HitResult.Location.X - TraceStart.X, 2.f) + powf(HitResult.Location.Y - TraceStart.Y, 2.f));
-		ThreatMap[0].Obstacle = HitResult.GetActor();
-		ThreatMap[0].ThreatValue = 1 - (Distance / TraceLength);
+		ThreatMap[4].Obstacle = HitResult.GetActor();
+		ThreatMap[4].ThreatValue = 1 - (Distance / TraceLength);
 	}
 	else
 	{
-		ThreatMap[0].Obstacle = nullptr;
-		ThreatMap[0].ThreatValue = 0.f;
+		ThreatMap[4].Obstacle = nullptr;
+		ThreatMap[4].ThreatValue = 0.f;
 	}
+	//Debug
+	//GEngine->AddOnScreenDebugMessage(-1, 0.f, FColor::Red, FString::Printf(TEXT("MachineSpirit: Right Threat: %f"), ThreatMap[4].ThreatValue));
 }
 
-void AMachineSpirit::CalculateThreatAmount()
+void AMachineSpirit::FillThreatMap()
 {
 	// Ну не запихивать же в каждую функцию эти две проверки...
 	if (!IsValid(OwnedLandraider)) return;
 	// Можно запихнуть в какую-нибудь функцию зануления или инициализации правильной размерности.
+	// Или тут это оставлять, или внутри функций расчётов. Или и тут и там...
 	if (ThreatMap.Num() != 5)
 	{
+		ThreatMap.Empty();
 		// Карты "опасности" препятствий: Лв(0), ЛП(1), П(2), ПП(3), Пр(4).
 		for (int i = 0; i < 5; ++i)
 		{
@@ -379,32 +415,79 @@ void AMachineSpirit::CalculateThreatAmount()
 
 int AMachineSpirit::DefineCurrentRoutePoint()
 {
-	if (!IsValid(CurrentRoute) || !IsValid(OwnedLandraider)) return -1;
-	
-	if (CurrentRoutePointIndex < 0 || CurrentRoutePointIndex >= CurrentRoute->GetRouteSpline()->GetNumberOfSplinePoints())
+	if (!IsValid(CurrentRoute))
 	{
-		return -1;
+		CurrentRoute = GameMode->GetRouteActor();
+	}
+	
+	if (CurrentRoute == nullptr)
+	{
+		return CurrentRoutePointIndex = -1;;
 	}
 
-	// Опасно. Это единственное место, где определяется точка маршрута.
-	FVector Distance = CurrentRoute->GetRouteSpline()->GetWorldLocationAtSplinePoint(CurrentRoutePointIndex) - OwnedLandraider->GetActorForwardVector();
-	// Это гениально! И не нужны никакие углы поворота!
-	bool bCurrentPointIsReached = (abs(Distance.X) < PointReachField) || (abs(Distance.Y) < PointReachField);
-	
-	if (bCurrentPointIsReached)
+	int RoutePointsNumber = CurrentRoute->GetRouteSpline()->GetNumberOfSplinePoints();
+	// Если пересоздать маршрут в рантайме, счётчик не скинется. И это косяк.
+	if (RoutePointsNumber > 2)
 	{
-		++CurrentRoutePointIndex;
+		if (CurrentRoutePointIndex < 0)
+		{
+			CurrentRoutePointIndex = 0;
+		}
+		else if (CurrentRoutePointIndex == 0)
+		{
+			CurrentRoutePointIndex = 1;
+		}
+		else if (CurrentRoutePointIndex < RoutePointsNumber)
+		{
+			// Опасно. Это единственное место, где определяется точка маршрута.
+			FVector Location = OwnedLandraider->GetActorLocation() + (OwnedLandraider->GetActorForwardVector() * (PawnDimensions.X / 2));
+			//FVector Distance = CurrentRoute->GetRouteSpline()->GetWorldLocationAtSplinePoint(CurrentRoutePointIndex) - Location;
+			FVector Point = CurrentRoute->GetRouteSpline()->GetWorldLocationAtSplinePoint(CurrentRoutePointIndex);
+
+			float DeltaX = PawnDimensions.X / 2;
+			float DeltaY = 1.f;
+			FVector ForwardVector = OwnedLandraider->GetActorForwardVector();
+			FVector RightVector = OwnedLandraider->GetActorRightVector();
+			FVector TraceStart = OwnedLandraider->GetActorLocation() + (ForwardVector * DeltaX) + (RightVector * DeltaY);
+			FVector TraceEnd = TraceStart + (ForwardVector * TraceLength) + (RightVector * DeltaY);
+			FVector RouteLocation = CurrentRoute->GetRouteSpline()->GetWorldLocationAtSplinePoint(CurrentRoutePointIndex);
+			FVector DeltaLocation = RouteLocation - TraceStart;
+			FRotator ForwardRotation = UKismetMathLibrary::FindLookAtRotation(TraceStart, TraceEnd);
+			FRotator PointRotation = UKismetMathLibrary::FindLookAtRotation(TraceStart, RouteLocation);
+
+			//GEngine->AddOnScreenDebugMessage(-1, 0.f, FColor::Red, FString::Printf(TEXT("MachineSpirit: RaiderLocation: %s"), *Location.ToString()));
+			//GEngine->AddOnScreenDebugMessage(-1, 0.f, FColor::Red, FString::Printf(TEXT("MachineSpirit: Current route points location: %s"), *CurrentRoute->GetRouteSpline()->GetWorldLocationAtSplinePoint(CurrentRoutePointIndex).ToString()));
+			
+			// ***Ситуация случается, когда по прямой идёт несколько течек - они их разом засчитывает, как пройденные по этой схеме...
+			//bool bCurrentPointIsReached = (abs(Distance.X) < PointReachField) || (abs(Distance.Y) < PointReachField);
+			bool bReachX = (abs(Point.X - Location.X) < PointReachField) || (abs(Point.X + Location.X) < PointReachField);
+			bool bReachY = (abs(Point.Y - Location.Y) < PointReachField) || (abs(Point.Y + Location.Y) < PointReachField);
+			bool bReachYaw = (abs(ForwardRotation.Yaw - PointRotation.Yaw) > PointReachAngle);
+
+			//GEngine->AddOnScreenDebugMessage(-1, 0.f, FColor::Red, FString::Printf(TEXT("MachineSpirit: Distance to point: %s"), *Distance.ToString()));
+
+			//if (bCurrentPointIsReached)
+			if((bReachX && bReachY) || bReachYaw)
+			{
+				CurrentRoutePointIndex++;
+			}
+		}
 	}
+
+	//Debug
+	//float number = CurrentRoute->GetRouteSpline()->GetNumberOfSplinePoints();
+	//GEngine->AddOnScreenDebugMessage(-1, 0.f, FColor::Red, FString::Printf(TEXT("MachineSpirit: Current route points number: %f"), number));
+	float index = CurrentRoutePointIndex;
+	GEngine->AddOnScreenDebugMessage(-1, 0.f, FColor::Red, FString::Printf(TEXT("MachineSpirit: Current route point: %f"), index));
 
 	return CurrentRoutePointIndex;
 }
 
 float AMachineSpirit::DefineRoutePointWeight()
 {
-	// Определяем положение активной точки маршрута и расстояние до неё.
-	//DefineCurrentRoutePoint();
+	DefineCurrentRoutePoint();
 
-	if (DefineCurrentRoutePoint() < 0)
+	if (CurrentRoutePointIndex < 1 || CurrentRoutePointIndex >= CurrentRoute->GetRouteSpline()->GetNumberOfSplinePoints())
 	{
 		return 0.f;
 	}
@@ -413,114 +496,315 @@ float AMachineSpirit::DefineRoutePointWeight()
 
 	// Определяем расстояние до точки: если больше вектора трассировки то значение -0.1-0-0.1, в зависимости от направления.
 	// Чисто обозначить направление
+	float DeltaX = PawnDimensions.X / 2;
+	float DeltaY = 1.f;
+	FVector ForwardVector = OwnedLandraider->GetActorForwardVector();
+	FVector RightVector = OwnedLandraider->GetActorRightVector();
+	FVector TraceStart = OwnedLandraider->GetActorLocation() + (ForwardVector * DeltaX) + (RightVector * DeltaY);
+	FVector TraceEnd = TraceStart + (ForwardVector * TraceLength) + (RightVector * DeltaY);
 	FVector RouteLocation = CurrentRoute->GetRouteSpline()->GetWorldLocationAtSplinePoint(CurrentRoutePointIndex);
-	FVector CurrentLocation = OwnedLandraider->GetActorForwardVector();
-	FVector DeltaLocation = RouteLocation - CurrentLocation;
+	FVector DeltaLocation = RouteLocation - TraceStart;
+	FRotator ForwardRotation = UKismetMathLibrary::FindLookAtRotation(TraceStart, TraceEnd);
+	FRotator PointRotation = UKismetMathLibrary::FindLookAtRotation(TraceStart, RouteLocation);
+
 	float Distance = sqrtf(powf(DeltaLocation.X, 2.f) + powf(DeltaLocation.Y, 2.f));
 
 	// Если едем прямо на точку, то продолжаем ехать.
-	if (DeltaLocation.Y == 0.f) return 0.f;
+	if ((ForwardRotation.Yaw - PointRotation.Yaw) == 0.f) return 0.f;
 	// Если нет, то смотрим куда повернуть.
 	if (Distance > TraceLength)
 	{
-		Weight = 0.1f;
+		Weight = 0.2f;
 	}
 	else
 	{
-		Weight = 1 - (Distance / TraceLength);
+		Weight = 1.2f - (Distance / TraceLength);
 	}
 
-	if (DeltaLocation.Y < 0.f)
+	if (ForwardRotation.Yaw > PointRotation.Yaw)
 	{
 		return Weight *= -1.f;
 	}
+
+	//Debug
+	//GEngine->AddOnScreenDebugMessage(-1, 0.f, FColor::Yellow, FString::Printf(TEXT("MachineSpirit: Route point weight: %f"), Weight));
 
 	return Weight;
 }
 
 float AMachineSpirit::DefineGroundBoundsWeight()
 {	
-	// Определяем "лучи" трассировки.
-	FVector Forward = OwnedLandraider->GetActorForwardVector();
-	Forward.X += TraceLength;
-	FVector Left = OwnedLandraider->GetActorForwardVector();
-	Left.X += (TraceLength - PawnDimensions.X);
-	Left.Y -= PawnDimensions.Y;
-	FVector Right = OwnedLandraider->GetActorForwardVector();
-	Right.X += (TraceLength - PawnDimensions.X);
-	Right.Y += PawnDimensions.Y;
-	// Вес находится в промежутке от -1 до 1. Знак определяет направление поворота: лево-право.
+	if (GroundBounds == FVector(0.f, 0.f, 0.f))
+	{
+		if (!IsValid(GameMode)) return 0.f;
+
+		GroundBounds = GameMode->GetGroundBounds();
+	}
+	if (!IsValid(OwnedLandraider)) return 0.f;
+	if (PawnDimensions == FVector(0.f, 0.f, 0.f)) return 0.f;
+
+	float DeltaX = TraceLength * 0.8f;
+	float DeltaY = PawnDimensions.Y;
+	FVector Location = OwnedLandraider->GetActorLocation();
+	FVector ForwardVector = OwnedLandraider->GetActorForwardVector();
+	FVector RightVector = OwnedLandraider->GetActorRightVector();
+	FVector ForwardEnd = Location + (ForwardVector * (DeltaX + (PawnDimensions.X / 2))) + (RightVector * 1.f);
+	FVector LeftEnd = Location + (ForwardVector * DeltaX) - (RightVector * DeltaY * 2);
+	FVector RightEnd = Location + (ForwardVector * DeltaX) + (RightVector * DeltaY * 2);
+	
+	// Вес находится в промежутке от -1 до 1. Знак определяет направление поворота: лево-право.!
 	float Weight = 0.f;
 
 	// Если спереди граница - поворачиваем направо.
-	if (Forward.X >= GroundBounds.X || Forward.X <= -GroundBounds.X)
+	if (ForwardEnd.X >= GroundBounds.X || ForwardEnd.X <= -GroundBounds.X)
 	{
 		// Если справа тоже граница - поворачиваем налево.
-		Weight = (abs(Forward.X) - abs(GroundBounds.X)) / TraceLength;
-		if (Right.X >= GroundBounds.X || Right.X <= -GroundBounds.X)
-		{
-			Weight *= -1.f;
-		}
+		Weight = (abs(ForwardEnd.X) - abs(GroundBounds.X)) / TraceLength;
+		
+		//if ((LeftEnd.X >= GroundBounds.X || LeftEnd.X <= -GroundBounds.X || LeftEnd.Y >= GroundBounds.Y || LeftEnd.Y <= -GroundBounds.Y))
+		//{
+		//	Weight *= 1.f;
+		//}
+		//else if (RightEnd.X >= GroundBounds.X || RightEnd.X <= -GroundBounds.X || RightEnd.Y >= GroundBounds.Y || RightEnd.Y <= -GroundBounds.Y)
+		//{
+		//	Weight *= -1.f;
+		//}
 	}
-	// Здесь можно поиграться, чтобы не проводилась проверка с случае "диагонального" выхода за границы.
-	else if (Forward.X >= GroundBounds.Y || Forward.X <= -GroundBounds.Y)
+	else if (ForwardEnd.Y >= GroundBounds.Y || ForwardEnd.Y <= -GroundBounds.Y)
 	{
-		Weight = (abs(Forward.X) - abs(GroundBounds.Y)) / TraceLength;
-		if (Right.X >= GroundBounds.X || Right.X <= -GroundBounds.X)
-		{
-			Weight *= -1.f;
-		}
+		Weight = (abs(ForwardEnd.Y) - abs(GroundBounds.Y)) / TraceLength;
+
+		//if ((LeftEnd.X >= GroundBounds.X || LeftEnd.X <= -GroundBounds.X || LeftEnd.Y >= GroundBounds.Y || LeftEnd.Y <= -GroundBounds.Y))
+		//{
+		//	Weight *= 1.f;
+		//}
+		//else if (RightEnd.X >= GroundBounds.X || RightEnd.X <= -GroundBounds.X || RightEnd.Y >= GroundBounds.Y || RightEnd.Y <= -GroundBounds.Y)
+		//{
+		//	Weight *= -1.f;
+		//}
 	}
 
-	return Weight;
+	if ((LeftEnd.X >= GroundBounds.X || LeftEnd.X <= -GroundBounds.X || LeftEnd.Y >= GroundBounds.Y || LeftEnd.Y <= -GroundBounds.Y))
+	{
+		Weight *= 1.2f;
+	}
+	else if (RightEnd.X >= GroundBounds.X || RightEnd.X <= -GroundBounds.X || RightEnd.Y >= GroundBounds.Y || RightEnd.Y <= -GroundBounds.Y)
+	{
+		Weight *= -1.2f;
+	}
+
+	//Debug
+	//GEngine->AddOnScreenDebugMessage(-1, 0.f, FColor::Yellow, FString::Printf(TEXT("MachineSpirit: Ground bounds weight: %f"), Weight));
+
+	// Добавим веса для поворота от границы. А то какая-то ситуация.
+	return Weight * 1.5f;
 }
 
-void AMachineSpirit::CalculateDirectionsWeight()
+void AMachineSpirit::FillWeightMap()
+{
+	if (WeightMap.Num() != 7)
+	{
+		WeightMap.Empty();
+		// Карта "весов" препятствий (Лв, ЛП, П, ПП, Пр), границ и маршрута.
+		WeightMap.Add(TEXT("Left"), 0.f);
+		WeightMap.Add(TEXT("LeftForward"), 0.f);
+		WeightMap.Add(TEXT("Forward"), 0.f);
+		WeightMap.Add(TEXT("RightForward"), 0.f);
+		WeightMap.Add(TEXT("Right"), 0.f);
+		WeightMap.Add(TEXT("Route"), 0.f);
+		WeightMap.Add(TEXT("Bounds"), 0.f);
+	}
+
+	WeightMap["Left"] = 1 - ThreatMap[0].ThreatValue;
+	WeightMap["LeftForward"] = 1 - ThreatMap[1].ThreatValue;
+	WeightMap["Forward"] = 1 - ThreatMap[2].ThreatValue;
+	WeightMap["RightForward"] = 1 - ThreatMap[3].ThreatValue;
+	WeightMap["Right"] = 1 - ThreatMap[4].ThreatValue;
+	WeightMap["Route"] = DefineRoutePointWeight();
+	WeightMap["Bounds"] = DefineGroundBoundsWeight();
+
+	//Debug
+	for (auto Direction : WeightMap)
+	{
+		GEngine->AddOnScreenDebugMessage(-1, 0.f, FColor::Blue, FString::Printf(TEXT("MachineSpirit: Weight direction: %s"), *Direction.Key.ToString()));
+		GEngine->AddOnScreenDebugMessage(-1, 0.f, FColor::Orange, FString::Printf(TEXT("MachineSpirit: Weight value: %f"), Direction.Value));
+	}
+}
+
+ESteerDirection AMachineSpirit::DefineSteerDirection()
 {
 	// Карта "весов" направлений: Лв(0), П(1), Пр(2).
-	if(DirectionWeightMap.Num() < 3)
-	for (int i = 0; i < 3; ++i)
+	if (DirectionWeightMap.Num() != 3)
 	{
-		DirectionWeightMap.Add(0.f);
+		DirectionWeightMap.Empty();
+		DirectionWeightMap.Add(FDirectionWeight{ ESteerDirection::Left, 0.f });
+		DirectionWeightMap.Add(FDirectionWeight{ ESteerDirection::Forward, 0.f });
+		DirectionWeightMap.Add(FDirectionWeight{ ESteerDirection::Right, 0.f });
 	}
 
+	//Debug
+	for (auto Direction : DirectionWeightMap)
+	{
+		GEngine->AddOnScreenDebugMessage(-1, 0.f, FColor::Yellow, FString::Printf(TEXT("MachineSpirit: Weight value: %f"), Direction.Weight));
+	}
+
+	FDirectionWeight Direction = { ESteerDirection::Forward, 0.f };
+
 	// ===== Left Direction =====
-	DirectionWeightMap[0] = (1 - ThreatMap[0].ThreatValue) + (1 - ThreatMap[1].ThreatValue) + (1 - ThreatMap[2].ThreatValue);
-
+	DirectionWeightMap[0].Weight = WeightMap["Left"] + WeightMap["LeftForward"] + WeightMap["Forward"];
 	// ===== Forward Direction =====
-	DirectionWeightMap[1] = (1 - ThreatMap[1].ThreatValue) + (1 - ThreatMap[2].ThreatValue) + (1 - ThreatMap[3].ThreatValue);
-
+	// *** При сплошных нулях - получается минус экспонента - может какой побитовый сдвиг?
+	DirectionWeightMap[1].Weight = WeightMap["LeftForward"] + WeightMap["Forward"] + WeightMap["RightForward"] - abs(WeightMap["Route"]) - abs(WeightMap["Bounds"]);
 	// ===== Right Direction =====
 	// Сюда прибавляем значение веса точки маршрута и границы (если они отрицательный - то понятно, да?)
-	DirectionWeightMap[2] = (1 - ThreatMap[2].ThreatValue) + (1 - ThreatMap[3].ThreatValue) + (1 - ThreatMap[4].ThreatValue) + DefineRoutePointWeight() + DefineGroundBoundsWeight();
+	// *** При сплошных нулях - получается экспонента - может какой побитовый сдвиг?
+	DirectionWeightMap[2].Weight = WeightMap["Forward"] + WeightMap["RightForward"] + WeightMap["Right"] + WeightMap["Route"] + WeightMap["Bounds"];
+
+	// Так, теперь меняем логику слегка - а то в любой непонятной ситуации ехать налево - такое себе.
+	// Сначала глядим что там спереди.
+	if (Direction.Weight < DirectionWeightMap[1].Weight)
+	{
+		Direction.Weight = DirectionWeightMap[1].Weight;
+		Direction.Direction = DirectionWeightMap[1].Direction;
+	}
+	// Потом справа.
+	if (Direction.Weight < DirectionWeightMap[2].Weight)
+	{
+		Direction.Weight = DirectionWeightMap[2].Weight;
+		Direction.Direction = DirectionWeightMap[2].Direction;
+	}
+	// И в конце уже слева.
+	if (Direction.Weight < DirectionWeightMap[0].Weight)
+	{
+		Direction.Weight = DirectionWeightMap[0].Weight;
+		Direction.Direction = DirectionWeightMap[0].Direction;
+	}
+
+	return Direction.Direction;
 }
 
-void AMachineSpirit::DefineSteerAction()
+float AMachineSpirit::DefineThrottle(ESteerDirection CurrentDirection)
 {
-	CalculateThreatAmount();
-	CalculateDirectionsWeight();
+	// Определяем скорость движения.
+	// Определение скорости движенния. Ну тут нужно пихать какую-нибудь сложную математику...
+	// Но для примитивного примера просто возьмём уровень "весо-угрозы" в качестве критерия.
+	// Если угроза от препятствий, или вес точки маршрути или гранцы превышают определённый показатель - меняем скоростной режим.
+	// Можно взять просто обратную зависимость, но хз, насколько это грамотное решение.
+	// А можно взять обратную зависимость с шагом изменения скорости. Вот это поинтереснее.
+	// Допустим, шаг будет 0.2. Условные "пять передач".
+	float SpeedIntencity = 0.f;
+	float ThreatValue = 0.f;
+	float PointBoundWeight = WeightMap["Route"] + WeightMap["Bounds"];
+	// Значение по которому определяется скорость.
+	float SpeedLimiter = 0.f;
+	// 4 - условное число, подходящее к 5-шаговому замедлению. 
+	float ReverseGearInstigationValue = 4 / SpeedSteps;
 
-	if (ThreatMap.Num() < 5 || DirectionWeightMap.Num() < 3) return;
+	switch (CurrentDirection)
+	{
 
-	//if(DirectionWeightMap[1] == 3)
+	case ESteerDirection::Left:
+		ThreatValue = ThreatMap[0].ThreatValue + ThreatMap[1].ThreatValue + ThreatMap[2].ThreatValue;
+		break;
 
-	// Если путь пролегает прямо - тапку в пол.
-	// Вопрос - как посчитать "средний" вес, и не проебаться с поворотом - ведь в 5 измерениях он может быть сильно разный...
-	// Надо думать... Но уже завтра. Сегодня больше не думается от слова "совсем".
-	// Если "Поворот" с весом < 25% (вес больше в средне 0.25) - поворачиваем на полшишечки.
-	// Если вес поворота 25% < 50% (вес больше в средне 0.5) - начинаем по полной и немножко тормозим.
-	// Если вес поворота 50% < 75% (вес больше в средне 0.75) - поворачиваем со всей силы на минимальной скорости.
+	case ESteerDirection::Forward:
+		ThreatValue = ThreatMap[1].ThreatValue + ThreatMap[2].ThreatValue + ThreatMap[3].ThreatValue;
+		break;
 
-	// Тут начинается история с задним ходом, которую нужно будет доделать когда-нибудь.
-	// Если вес > 66% (70-75) - врубаем заднюю и крутим руль в другую сторону, когда начинаем ехать назад.
+	case ESteerDirection::Right:
+		ThreatValue = ThreatMap[2].ThreatValue + ThreatMap[3].ThreatValue + ThreatMap[4].ThreatValue;
+		break;
+
+	default:
+		break;
+	}
+
+	// Почему эта лажа не работает??????
+	// Назначается SpeedLimiter только, когда ThreatValue больше.
+	// И в результате ускорение получается нулевое.
+	if (ThreatValue > PointBoundWeight)
+	{
+		SpeedLimiter = ThreatValue;
+	}
+	else if (ThreatValue <= PointBoundWeight)
+	{
+		SpeedLimiter = PointBoundWeight;
+	}
+	// А теперь, собственно, скорость.
+	for (int i = 1; i < SpeedSteps; i++)
+	{
+		// Что за херня, почему if правильно не разрешается???
+		// Почему при инициализации SpeedStepAmount = 2, а потом тут же 0?????
+		float SpeedStepAmount = float(i) / float(SpeedSteps);
+		if (SpeedLimiter <= SpeedStepAmount)
+		{
+			SpeedIntencity = 1.f - float(((i - 1)/ SpeedSteps));
+			break;
+		}
+	}
+	// Если совсем тоска - то, врубай заднюю... И не раз. Но потом.
+	if (SpeedLimiter >= ReverseGearInstigationValue)
+	{
+		// Врубаем заднюю и поворачиваем в обратную сторону. Но это уже совсем другая история.
+	}
+
+	//Debug
+	//GEngine->AddOnScreenDebugMessage(-1, 0.f, FColor::Orange, FString::Printf(TEXT("MachineSpirit: Throttle - speed intencity: %f"), SpeedIntencity));
+
+	return SpeedIntencity;
 }
 
-
-//void AMachineSpirit::ObstacleTracing()
-//{
-//
-//
-//}
+void AMachineSpirit::DefineSteerBehaviour()
+{
+	if (!IsValid(OwnedLandraider)) return;
+	// Определяем направление поворота.
+	FillThreatMap();
+	FillWeightMap();
+	ESteerDirection CurrentDirection = DefineSteerDirection();
+	float FullThrottle = DefineThrottle(CurrentDirection);
+	
+	// Жмём на педальку.
+	if (FullThrottle > 0.f)
+	{
+		float CurrentSpeed = OwnedLandraider->GetLandraiderMovementComponent()->GetCurrentSpeed();
+		float MaxSpeed = OwnedLandraider->GetLandraiderMovementComponent()->GetMaxSpeed();
+		// Если скорость больше, чем надо - сбавляем.
+		if ((CurrentSpeed / MaxSpeed) - FullThrottle > 0.5f)
+		{
+			OwnedLandraider->GetLandraiderMovementComponent()->SetDriveAction(EDriveAction::Braking, FullThrottle);
+		}
+		else if ((CurrentSpeed / MaxSpeed) > FullThrottle)
+		{
+			OwnedLandraider->GetLandraiderMovementComponent()->SetDriveAction(EDriveAction::IdleMoving, FullThrottle);
+		}
+		else
+		{
+			OwnedLandraider->GetLandraiderMovementComponent()->SetDriveAction(EDriveAction::FullThrottle, FullThrottle);
+		}
+	}
+	// Крутим баранку.
+	// TODO: Определить условия поворота руля на полшишечки.
+	switch (CurrentDirection)
+	{
+	case ESteerDirection::Left:
+		OwnedLandraider->GetLandraiderMovementComponent()->Steering(-1.f);
+		break;
+	
+	case ESteerDirection::Forward:
+		OwnedLandraider->GetLandraiderMovementComponent()->Steering(0.f);
+		break;
+	
+	case ESteerDirection::Right:
+		OwnedLandraider->GetLandraiderMovementComponent()->Steering(1.f);
+		break;
+	
+	default:
+		break;
+	}
+	// Может, хоть так ты поедешь???!
+	//OwnedLandraider->GetLandraiderMovementComponent()->MoveForward();
+	//OwnedLandraider->GetLandraiderMovementComponent()->Turn();
+}
 
 EMachineSpiritState AMachineSpirit::GetMachineSpiritState()
 {

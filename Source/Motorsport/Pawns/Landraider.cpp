@@ -3,8 +3,10 @@
 
 #include "Landraider.h"
 #include "Components/LandraiderMovementComponent.h"
+#include "Controllers/MachineSpirit.h"
 
 #include "Components/StaticMeshComponent.h"
+#include "Engine/Engine.h" // Debug strings
 #include "Engine/StaticMesh.h"
 
 // Sets default values
@@ -18,12 +20,6 @@ ALandraider::ALandraider()
 
 	Mesh = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("Mesh"));
 	Mesh->SetupAttachment(Root);
-	// Ќужно подн€ть меш, а то он будет при спавне "заземл€тьс€" и не будет спавнитьс€. ѕока что в Blueprint.
-	Mesh->SetSimulatePhysics(true);
-	Mesh->SetCollisionEnabled(ECollisionEnabled::QueryAndPhysics);
-	Mesh->SetCollisionResponseToChannel(ECollisionChannel::ECC_Vehicle, ECollisionResponse::ECR_Block);
-	Mesh->GetBodyInstance()->SetMassOverride(Mass);
-	Mesh->GetBodyInstance()->UpdateMassProperties();
 
 	MovementComponent = CreateDefaultSubobject<ULandraiderMovementComponent>(TEXT("MovementComponent"));
 
@@ -36,7 +32,7 @@ void ALandraider::BeginPlay()
 	
 }
 
-ULandraiderMovementComponent* ALandraider::GetMovementComponent()
+ULandraiderMovementComponent* ALandraider::GetLandraiderMovementComponent()
 {
 	return MovementComponent;
 }
@@ -46,6 +42,9 @@ void ALandraider::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
 
+	// Debug - координаты на карте.
+	//GEngine->AddOnScreenDebugMessage(-1, 0.f, FColor::Green, FString::Printf(TEXT("Landraider: Current Location: %s"), *GetActorLocation().ToString()));
+	//GEngine->AddOnScreenDebugMessage(-1, 0.f, FColor::Yellow, FString::Printf(TEXT("Landraider: Current Rotation: %s"), *GetActorRotation().ToString()));
 }
 
 // Called to bind functionality to input

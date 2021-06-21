@@ -27,8 +27,9 @@ public:
 
 private:
 
-	FQuat CurrentTurn;
+	//FQuat CurrentTurn;
 	EDriveAction CurrentDriveAction = EDriveAction::IdleMoving;
+	FRotator CurrentTurn;
 
 	float CurrentSpeed = 0.f;
 	float CurrentTurnSpeed = 0.f;
@@ -44,11 +45,8 @@ private:
 	void IdleMoving();
 	void Braking();
 
-	void MoveForward();
-	
 	// Reering Behaviour
 	void CalculateTurnRate(float TurnRateInput);
-	void Turn();
 
 	// TODO: Реализовать занос. Если останется время.
 	void Skidding();
@@ -56,18 +54,18 @@ private:
 protected:
 	
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Movement")
-	float MaxMoveSpeed = 200.0f;
+	float MaxMoveSpeed = 500.0f;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Movement")
-	float MaxReverseSpeed = -100.0f;
-	
+	float MaxReverseSpeed = -200.0f;
+
 	// Максимальная скорость поворота, она же угол.
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Movement")
-	float MaxTurnRate = 100.0f;
-
+	float MaxTurnRate = 50.0f;
+	
 	// Время разгона
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Movement")
-	float AccelerationStep = 0.02f;
+	float AccelerationStep = 0.2f;
 	
 	// Максимальное ускорение
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Movement")
@@ -75,11 +73,11 @@ protected:
 
 	//Время остановки
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Movement")
-	float IdleSpeedFadingStep = 0.01f;
+	float IdleSpeedFadingStep = 0.1f;
 
 	//Время торможения
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Movement")
-	float BrakingStep = 0.04f;
+	float BrakingStep = 0.4f;
 
 	
 	// Called when the game starts
@@ -87,13 +85,23 @@ protected:
 
 public:	
 	
+	float GetCurrentSpeed() const;
+	float GetMaxSpeed() const;
+	float GetMaxReverseSpeed() const;
+	float GetMaxTurnRate() const;
+	
+	UFUNCTION(BlueprintCallable)
+	void MoveForward();
+	
+	UFUNCTION(BlueprintCallable)
+	void Turn();
+	
 	// Газ-Тормоз
 	UFUNCTION(BlueprintCallable)
 	float SetDriveAction(EDriveAction Action, float InputIntensity);
-		
 	// Поворот
 	UFUNCTION(BlueprintCallable)
-	FQuat Steering(float TurnRateInput);
+	FRotator Steering(float TurnRateInput);
 
 	// Called every frame
 	virtual void TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction) override;

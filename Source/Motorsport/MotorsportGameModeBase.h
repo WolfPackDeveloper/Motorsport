@@ -13,7 +13,7 @@ class UStaticMesh;
 
 class ARouteActor;
 class ALandraider;
-//class AMachineSpirit;
+class AMachineSpirit;
 
 UENUM()
 enum class EGameStatus : uint8
@@ -43,7 +43,7 @@ private:
 	ARouteActor* RouteActor = nullptr;
 
 	//UPROPERTY()
-	//AMachineSpirit* LRController = nullptr;
+	//AMachineSpirit* MachineSpirit = nullptr;
 
 	UPROPERTY()
 	ALandraider* Landraider = nullptr;

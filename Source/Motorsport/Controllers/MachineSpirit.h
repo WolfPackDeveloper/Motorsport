@@ -13,14 +13,6 @@ class ARouteActor;
 
 class AStaticMeshActor;
 
-USTRUCT()
-struct FThreatInstigator
-{
-	//FHitResult HitObstacle; // Ну мало ли пригодится. А так, можно отделаться и просто указателем на AActor.
-	AActor* Obstacle;
-	float ThreatValue;
-};
-
 UENUM()
 enum class EMachineSpiritState : uint8
 {
@@ -28,13 +20,33 @@ enum class EMachineSpiritState : uint8
 	Sleeps
 };
 
-//UENUM()
-//enum class ESteerBehaviour : uint8
-//{
-//	Wait,
-//	Explore,
-//	FollowTheRoute
-//};
+UENUM()
+enum class ESteerDirection : uint8
+{
+	Left,
+	Forward,
+	Right
+};
+
+// Объект карты препятствий.
+USTRUCT()
+struct FThreatInstigator
+{
+	GENERATED_BODY()
+	//FHitResult HitObstacle; // Ну мало ли пригодится. А так, можно отделаться и просто указателем на AActor.
+	AActor* Obstacle;
+	float ThreatValue;
+};
+
+// Объект карты весов
+USTRUCT()
+struct FDirectionWeight
+{
+	GENERATED_BODY()
+	
+	ESteerDirection Direction;
+	float Weight;
+};
 
 UCLASS()
 class MOTORSPORT_API AMachineSpirit : public AAIController
@@ -47,8 +59,10 @@ public:
 
 private:
 
+	// Состояние AI.
 	EMachineSpiritState SpiritState = EMachineSpiritState::Sleeps;
-	//ESteerBehaviour SteerBehaviour = ESteerBehaviour::Wait;
+	// Направление поворота.
+	//ESteerDirection SteerDirection = ESteerDirection::Forward;
 
 	UPROPERTY()
 	AMotorsportGameModeBase* GameMode = nullptr;
@@ -59,66 +73,112 @@ private:
 	UPROPERTY()
 	ARouteActor* CurrentRoute = nullptr;
 
+	UPROPERTY()
 	int32 CurrentRoutePointIndex = 0;
+	
+	// Условная шкала деления скорости в зависимости от близости препятствия, или цели.
+	UPROPERTY()
+	int32 SpeedSteps = 5;
 
 	// Габариты машины.
+	UPROPERTY()
 	FVector PawnDimensions;
+	
 	// Границы Ground
+	UPROPERTY()
 	FVector GroundBounds;
 
-	float TraceLength = 500.f; // TODO: Можно сделать динамически изменяемой, в зависимости от скорости.
+	// Дальность "обзора" AI.
+	UPROPERTY()
+	float TraceLength = 2000.f; // TODO: Можно сделать динамически изменяемой, в зависимости от скорости.
 	// Поле, проезд в радиусе которого от точки, будет считаться проездом по точке.
-	float PointReachField = 50.f;
-	// Вес находится в промежутке от -0.5 до 0.5. Знак определяем направление поворота: лево-право.
-//	float CurrentRoutePointWeight = 0.f;
-	// Вес находится в промежутке от -1 до 1. Знак определяет направление поворота: лево-право.
-//	float GroundBoundsWeight = 0.f;
+	UPROPERTY()
+	float PointReachField = 1000.f;
 
-	// Карты "опасности" препятствий: Лв, ЛП, П, ПП, Пр.
+	UPROPERTY()
+	float PointReachAngle = 90.f;
+
+	// Карты "угроз" препятствий: Лв, ЛП, П, ПП, Пр.
+	UPROPERTY()
 	TArray<FThreatInstigator> ThreatMap;
+	
+	// Карта "весов" препятствий (Лв, ЛП, П, ПП, Пр), границ и маршрута.
+	UPROPERTY()
+	TMap<FName, float> WeightMap;
+	
 	// Карта "весов" направлений: Лв, П, Пр
-	TArray<float> DirectionWeightMap;
+	UPROPERTY()
+	TArray<FDirectionWeight> DirectionWeightMap;
 
 	// ========== FUNCTIONS ============
 
 	// Разное
+	UFUNCTION()
 	FVector GetOwnedPawnDimensions();
+	
 	// "Радиус" границы.
+	UFUNCTION()
 	void DefineGroundBounds();
 
 	// Nodes Movement
+	UFUNCTION()
 	void Throttle(float InputIntensity);
+	
+	UFUNCTION()
 	void ReverseGear(float InputIntensity);
+	
+	UFUNCTION()
 	void Brake(float InputIntensity);
+	
+	UFUNCTION()
 	void IdleMoving(float InputIntensity);
+	
+	UFUNCTION()
 	void TurnRight(float InputIntensity);
 
-	// Nodes Route Following
-//	void BuildRoute();
-
-//	void ExploreSteerBehaviour();
-//	void RouteFollowingSteerBehaviour();
-	void DefineSteerAction();
-
 	// Трассировка и определение направления.
+	UFUNCTION()
 	void TraceLeft();
+	
+	UFUNCTION()
 	void TraceForwardLeft();
+	
+	UFUNCTION()
 	void TraceForward();
+	
+	UFUNCTION()
 	void TraceForwardRight();
+	
+	UFUNCTION()
 	void TraceRight();
-	void CalculateThreatAmount();
+	
+	UFUNCTION()
+	void FillThreatMap();
 
+	UFUNCTION()
 	int32 DefineCurrentRoutePoint();
+	
+	UFUNCTION()
 	float DefineRoutePointWeight();
+	
+	UFUNCTION()
 	float DefineGroundBoundsWeight();
-	void CalculateDirectionsWeight();
+	
+	UFUNCTION()
+	void FillWeightMap();
 
-	void ObstacleTracing();
+	UFUNCTION()
+	ESteerDirection DefineSteerDirection();
+	
+	UFUNCTION()
+	float DefineThrottle(ESteerDirection CurrentDirection);
 
 protected:
 
 	// Called when the game starts or when spawned
 	virtual void BeginPlay() override;
+	virtual void OnPossess(APawn* InPawn) override;
+	virtual void OnUnPossess() override;
 
 public:
 
@@ -128,6 +188,8 @@ public:
 	UFUNCTION(BlueprintCallable)
 	void SetMachineSpiritState(EMachineSpiritState State);
 
-	// Called every frame
+	UFUNCTION(BlueprintCallable)
+	void DefineSteerBehaviour();
+
 	virtual void Tick(float DeltaTime) override;
 };

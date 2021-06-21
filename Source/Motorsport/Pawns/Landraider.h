@@ -9,6 +9,7 @@
 class USceneComponent;
 class UStaticMeshComponent;
 
+class AMachineSpirit;
 class ULandraiderMovementComponent;
 
 UCLASS()
@@ -24,6 +25,9 @@ private:
 	
 	UPROPERTY()
 	USceneComponent* Root = nullptr;
+
+	UPROPERTY()
+	AMachineSpirit* MachineSpirit = nullptr;
 
 protected:
 	
@@ -42,7 +46,8 @@ protected:
 
 public:	
 	
-	ULandraiderMovementComponent* GetMovementComponent();
+	UFUNCTION(BlueprintCallable)
+	ULandraiderMovementComponent* GetLandraiderMovementComponent();
 	
 	// Called every frame
 	virtual void Tick(float DeltaTime) override;

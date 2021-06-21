@@ -9,6 +9,7 @@
 #include "Engine/StaticMesh.h" // Ну хз... поможет ли?
 #include "Engine/StaticMeshActor.h" // Find Ground - lazy method
 #include "Kismet/GameplayStatics.h" // Find Ground
+#include "Runtime/Renderer/Public/MeshDrawShaderBindings.h" // Strange Error - identifier "FMeshDrawSingleShaderBindings" is undefined
 
 
 //#include "ConstructorHelpers.h" // Random Meshes
@@ -98,14 +99,11 @@ void AMotorsportGameModeBase::BeginPlay()
 	// Десантируем дроппод с Лэндрейдером.
 	if (!IsValid(Landraider))
 	{
-		
-		//bool bNoCollisionFail = true;
-		//FActorSpawnParameters SpawnParams;
-		//ActorSpawnParams.SpawnCollisionHandlingOverride = bNoCollisionFail ? ESpawnActorCollisionHandlingMethod::AlwaysSpawn : ESpawnActorCollisionHandlingMethod::AdjustIfPossibleButDontSpawnIfColliding;
-		//SpawnParams.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AdjustIfPossibleButAlwaysSpawn;
-
-		//Landraider = GetWorld()->SpawnActor<ALandraider>(MachineClass, Location, Rotation, SpawnParams);
 		Landraider = GetWorld()->SpawnActor<ALandraider>(MachineClass, Location, Rotation);
+		Landraider->SpawnDefaultController();
+		// Может поможет потикать...
+//		MachineSpirit = GetWorld()->SpawnActor<AMachineSpirit>();
+//		MachineSpirit->Possess(Landraider);
 	}
 
 	// Спавним маршрут перед носом у Лэндрейдера.
