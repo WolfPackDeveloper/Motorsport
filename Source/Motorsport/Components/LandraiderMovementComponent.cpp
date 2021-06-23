@@ -162,18 +162,15 @@ void ULandraiderMovementComponent::CalculateTurnRate(float TurnRateInput)
 	if (CurrentSpeed != 0.f)
 	{
 		CurrentTurnRate = TurnRateInput * MaxTurnRate * FMath::Clamp(1.f - (abs(CurrentSpeed) / MaxMoveSpeed), 0.1f, 1.f);
-		//FRotator Rotation = FRotator(0, CurrentTurnRate, 0);
-		//CurrentTurn = FQuat(Rotation);
 		CurrentTurn = FRotator(0, CurrentTurnRate, 0);
 	}
 	else
 	{
-		//CurrentTurn = FQuat(FVector(0.f, 0.f, 0.f), 0.f);
 		CurrentTurn = FRotator(0.f, 0.f, 0.f);
 	}
 
 	//Debug
-	GEngine->AddOnScreenDebugMessage(-1, 0.f, FColor::Cyan, FString::Printf(TEXT("MovementComponent: Currnt turn: %s"), *CurrentTurn.ToString()));
+	//GEngine->AddOnScreenDebugMessage(-1, 0.f, FColor::Cyan, FString::Printf(TEXT("MovementComponent: Currnt turn: %s"), *CurrentTurn.ToString()));
 }
 
 void ULandraiderMovementComponent::Turn()

@@ -61,7 +61,7 @@ protected:
 
 	// Максимальная скорость поворота, она же угол.
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Movement")
-	float MaxTurnRate = 50.0f;
+	float MaxTurnRate = 120.0f;
 	
 	// Время разгона
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Movement")

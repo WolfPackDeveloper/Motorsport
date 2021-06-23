@@ -444,14 +444,15 @@ int AMachineSpirit::DefineCurrentRoutePoint()
 			//FVector Distance = CurrentRoute->GetRouteSpline()->GetWorldLocationAtSplinePoint(CurrentRoutePointIndex) - Location;
 			FVector Point = CurrentRoute->GetRouteSpline()->GetWorldLocationAtSplinePoint(CurrentRoutePointIndex);
 
-			//float DeltaX = PawnDimensions.X / 2;
-			//float DeltaY = PawnDimensions.Y / 2;
-			//FVector ForwardVector = OwnedLandraider->GetActorForwardVector();
-			//FVector RightVector = OwnedLandraider->GetActorRightVector();
-			//FVector TraceStart = OwnedLandraider->GetActorLocation() + (ForwardVector * DeltaX) + (RightVector * 1.f);
-			//FVector TraceEnd = TraceStart + (ForwardVector * TraceLength) + (RightVector * 1.f);
-			//FVector TraceLeft = TraceStart + (ForwardVector * 1.f) + (RightVector * (-DeltaY));
-			//FVector TraceRight = TraceStart + (ForwardVector * 1.f) + (RightVector * (DeltaY));
+			float DeltaX = PawnDimensions.X / 2;
+			float DeltaY = PawnDimensions.Y / 2;
+			FVector ForwardVector = OwnedLandraider->GetActorForwardVector();
+			FVector RightVector = OwnedLandraider->GetActorRightVector();
+			FVector TraceStart = OwnedLandraider->GetActorLocation() + (ForwardVector * DeltaX) + (RightVector * 1.f);
+			FVector TraceForward = TraceStart + (ForwardVector * PointReachField) + (RightVector * 1.f);
+			FVector TraceBack = TraceStart + (ForwardVector * (-PointReachField - DeltaX)) + (RightVector * 1.f);
+			FVector TraceLeft = TraceStart + (ForwardVector * 1.f) + (RightVector * (-PointReachField - DeltaY));
+			FVector TraceRight = TraceStart + (ForwardVector * 1.f) + (RightVector * (PointReachField + DeltaY));
 			//FVector RouteLocation = CurrentRoute->GetRouteSpline()->GetWorldLocationAtSplinePoint(CurrentRoutePointIndex);
 			//FVector DeltaLocation = RouteLocation - TraceStart;
 			//FRotator ForwardRotation = UKismetMathLibrary::FindLookAtRotation(TraceStart, TraceEnd);
@@ -459,29 +460,76 @@ int AMachineSpirit::DefineCurrentRoutePoint()
 			//FRotator RightRotation = UKismetMathLibrary::FindLookAtRotation(TraceStart, TraceRight);
 			//FRotator PointRotation = UKismetMathLibrary::FindLookAtRotation(TraceStart, RouteLocation);
 
-			bool bReachX = (abs(Point.X - Location.X) < PointReachField) || (abs(Point.X + Location.X) < PointReachField);
-			bool bReachY = (abs(Point.Y - Location.Y) < PointReachField) || (abs(Point.Y + Location.Y) < PointReachField);
-			//bool bReachYaw = false;
+			// Debug trace.
+			//FHitResult HitResult;
+			//TArray<AActor*> ActorsToIgnore;
+			//ActorsToIgnore.Add(OwnedLandraider);
 
-			//if (ForwardRotation.Yaw >= -90.f && ForwardRotation.Yaw <= 90.f)
-			//{
-			//	if (PointRotation.Yaw < LeftRotation.Yaw || PointRotation.Yaw > RightRotation.Yaw)
-			//	{
-			//		bReachYaw = true;
-			//	}
-			//}
-			//else if (ForwardRotation.Yaw < -90.f && ForwardRotation.Yaw >= -180.f || ForwardRotation.Yaw > 90.f && ForwardRotation.Yaw <= 180.f)
-			//{
-			//	if (PointRotation.Yaw > LeftRotation.Yaw || PointRotation.Yaw < RightRotation.Yaw)
-			//	{
-			//		bReachYaw = true;
-			//	}
-			//}
+			//UKismetSystemLibrary::LineTraceSingle(
+			//	GetWorld(),
+			//	TraceStart,
+			//	TraceForward,
+			//	UEngineTypes::ConvertToTraceType(ECC_Visibility),
+			//	true,
+			//	ActorsToIgnore,
+			//	EDrawDebugTrace::ForDuration,
+			//	HitResult,
+			//	true,
+			//	FLinearColor::Yellow,
+			//	FLinearColor::Red,
+			//	0.1f
+			//);
 
-			//if (bReachX && bReachY || bReachYaw)
-			//{
-			//	CurrentRoutePointIndex++;
-			//}
+			//UKismetSystemLibrary::LineTraceSingle(
+			//	GetWorld(),
+			//	TraceStart,
+			//	TraceBack,
+			//	UEngineTypes::ConvertToTraceType(ECC_Visibility),
+			//	true,
+			//	ActorsToIgnore,
+			//	EDrawDebugTrace::ForDuration,
+			//	HitResult,
+			//	true,
+			//	FLinearColor::Yellow,
+			//	FLinearColor::Red,
+			//	0.1f
+			//);
+
+			//UKismetSystemLibrary::LineTraceSingle(
+			//	GetWorld(),
+			//	TraceStart,
+			//	TraceLeft,
+			//	UEngineTypes::ConvertToTraceType(ECC_Visibility),
+			//	true,
+			//	ActorsToIgnore,
+			//	EDrawDebugTrace::ForDuration,
+			//	HitResult,
+			//	true,
+			//	FLinearColor::Yellow,
+			//	FLinearColor::Red,
+			//	0.1f
+			//);
+
+			//UKismetSystemLibrary::LineTraceSingle(
+			//	GetWorld(),
+			//	TraceStart,
+			//	TraceRight,
+			//	UEngineTypes::ConvertToTraceType(ECC_Visibility),
+			//	true,
+			//	ActorsToIgnore,
+			//	EDrawDebugTrace::ForDuration,
+			//	HitResult,
+			//	true,
+			//	FLinearColor::Yellow,
+			//	FLinearColor::Red,
+			//	0.1f
+			//);
+
+			bool bReachX = Point.X < TraceForward.X && Point.X > TraceBack.X || Point.X > TraceForward.X && Point.X < TraceBack.X;
+			bool bReachY = Point.Y < TraceRight.Y && Point.Y > TraceLeft.Y || Point.Y > TraceRight.Y && Point.Y < TraceLeft.Y;
+
+			//bool bReachX = (abs(Point.X - Location.X) < PointReachField) || (abs(Point.X + Location.X) < PointReachField);
+			//bool bReachY = (abs(Point.Y - Location.Y) < PointReachField) || (abs(Point.Y + Location.Y) < PointReachField);
 
 			if (bReachX && bReachY)
 			{
@@ -494,7 +542,7 @@ int AMachineSpirit::DefineCurrentRoutePoint()
 	//float number = CurrentRoute->GetRouteSpline()->GetNumberOfSplinePoints();
 	//GEngine->AddOnScreenDebugMessage(-1, 0.f, FColor::Red, FString::Printf(TEXT("MachineSpirit: Current route points number: %f"), number));
 	float index = CurrentRoutePointIndex;
-	GEngine->AddOnScreenDebugMessage(-1, 0.f, FColor::Red, FString::Printf(TEXT("MachineSpirit: Current route point: %f"), index));
+	//GEngine->AddOnScreenDebugMessage(-1, 0.f, FColor::Red, FString::Printf(TEXT("MachineSpirit: Current route point: %f"), index));
 
 	return CurrentRoutePointIndex;
 }
@@ -509,23 +557,105 @@ float AMachineSpirit::DefineRoutePointWeight()
 	}
 
 	float Weight = 0.f;
-
-	// Определяем расстояние до точки: если больше вектора трассировки то значение -0.1-0-0.1, в зависимости от направления.
-	// Чисто обозначить направление
+	float PointWeightAdd = 0.2f;
 	float DeltaX = PawnDimensions.X / 2;
 	float DeltaY = PawnDimensions.Y / 2;
 	FVector ForwardVector = OwnedLandraider->GetActorForwardVector();
 	FVector RightVector = OwnedLandraider->GetActorRightVector();
 	FVector TraceStart = OwnedLandraider->GetActorLocation() + (ForwardVector * DeltaX) + (RightVector * 1.f);
-	FVector TraceEnd = TraceStart + (ForwardVector * TraceLength) + (RightVector * 1.f);
-	FVector TraceLeft = TraceStart + (ForwardVector * 1.f) + (RightVector * (-DeltaY));
+	FVector TraceForward = TraceStart + (ForwardVector * (TraceLength + DeltaX)) + (RightVector * 1.f);
+	FVector TraceBack = TraceStart + (ForwardVector * (-PointReachField - DeltaX)) + (RightVector * 1.f);
+	FVector TraceLeft = TraceStart + (ForwardVector * 1.f) + (RightVector * (-TraceLength - DeltaY));
+	FVector TraceRight = TraceStart + (ForwardVector * 1.f) + (RightVector * (TraceLength + DeltaY));
 	FVector RouteLocation = CurrentRoute->GetRouteSpline()->GetWorldLocationAtSplinePoint(CurrentRoutePointIndex);
-	FVector DeltaLocation = RouteLocation - TraceStart;
-	FRotator ForwardRotation = UKismetMathLibrary::FindLookAtRotation(TraceStart, TraceEnd);
+	//FVector TracePoint = RouteLocation;
+	FRotator ForwardRotation = UKismetMathLibrary::FindLookAtRotation(TraceStart, TraceForward);
+	//FRotator BackRotation = UKismetMathLibrary::FindLookAtRotation(TraceStart, TraceBack);
 	FRotator LeftRotation = UKismetMathLibrary::FindLookAtRotation(TraceStart, TraceLeft);
 	FRotator PointRotation = UKismetMathLibrary::FindLookAtRotation(TraceStart, RouteLocation);
 
+	FVector DeltaLocation = RouteLocation - TraceStart;
+
 	float Distance = sqrtf(powf(DeltaLocation.X, 2.f) + powf(DeltaLocation.Y, 2.f));
+
+	FHitResult HitResult;
+	TArray<AActor*> ActorsToIgnore;
+	ActorsToIgnore.Add(OwnedLandraider);
+
+	UKismetSystemLibrary::LineTraceSingle(
+		GetWorld(),
+		TraceStart,
+		RouteLocation,
+		UEngineTypes::ConvertToTraceType(ECC_Visibility),
+		true,
+		ActorsToIgnore,
+		EDrawDebugTrace::ForDuration,
+		HitResult,
+		true,
+		FLinearColor::Red,
+		FLinearColor::Green,
+		0.1f
+	);
+
+	UKismetSystemLibrary::LineTraceSingle(
+		GetWorld(),
+		TraceStart,
+		TraceForward,
+		UEngineTypes::ConvertToTraceType(ECC_Visibility),
+		true,
+		ActorsToIgnore,
+		EDrawDebugTrace::ForDuration,
+		HitResult,
+		true,
+		FLinearColor::Yellow,
+		FLinearColor::Red,
+		0.1f
+	);
+
+	UKismetSystemLibrary::LineTraceSingle(
+		GetWorld(),
+		TraceStart,
+		TraceBack,
+		UEngineTypes::ConvertToTraceType(ECC_Visibility),
+		true,
+		ActorsToIgnore,
+		EDrawDebugTrace::ForDuration,
+		HitResult,
+		true,
+		FLinearColor::Yellow,
+		FLinearColor::Red,
+		0.1f
+	);
+
+	UKismetSystemLibrary::LineTraceSingle(
+		GetWorld(),
+		TraceStart,
+		TraceLeft,
+		UEngineTypes::ConvertToTraceType(ECC_Visibility),
+		true,
+		ActorsToIgnore,
+		EDrawDebugTrace::ForDuration,
+		HitResult,
+		true,
+		FLinearColor::Yellow,
+		FLinearColor::Red,
+		0.1f
+	);
+
+	UKismetSystemLibrary::LineTraceSingle(
+		GetWorld(),
+		TraceStart,
+		TraceRight,
+		UEngineTypes::ConvertToTraceType(ECC_Visibility),
+		true,
+		ActorsToIgnore,
+		EDrawDebugTrace::ForDuration,
+		HitResult,
+		true,
+		FLinearColor::Yellow,
+		FLinearColor::Red,
+		0.1f
+	);
 
 	// Если едем прямо на точку, то продолжаем ехать.
 	//if ((ForwardRotation.Yaw - PointRotation.Yaw) == 0.f) return 0.f;
@@ -534,36 +664,39 @@ float AMachineSpirit::DefineRoutePointWeight()
 		return Weight = 0.f;
 	}
 
-	// Если нет, то смотрим куда повернуть.
+	// Если нет, то смотрим вес.
 	if (Distance > TraceLength)
 	{
-		Weight = 0.2f;
+		Weight = PointWeightAdd;
 	}
 	else
 	{
-		Weight = 1.2f - (Distance / TraceLength);
+		Weight = PointWeightAdd + (1.f - (Distance / TraceLength));
+	}
+	// И куда повернуть.
+
+	bool bNordWest = ForwardRotation.Yaw < 0.f && LeftRotation.Yaw < 0.f;
+	bool bNordEast = ForwardRotation.Yaw > 0.f && LeftRotation.Yaw < 0.f;
+	bool bSouthWest = ForwardRotation.Yaw < 0.f && LeftRotation.Yaw < 0.f;
+	bool bSouthEast = ForwardRotation.Yaw > 0.f && LeftRotation.Yaw < 0.f;
+
+	if (bNordWest)
+	{
+
 	}
 
-	if (ForwardRotation.Yaw >= -90.f && ForwardRotation.Yaw <= 90.f)
+	bool bLeftTurn = PointRotation.Yaw < ForwardRotation.Yaw&& PointRotation.Yaw > LeftRotation.Yaw;
+
+	if (bLeftTurn)
 	{
-		if (PointRotation.Yaw < ForwardRotation.Yaw && PointRotation.Yaw > LeftRotation.Yaw)
-		{
-			return Weight *= -1.f;
-		}
-	}
-	else if (ForwardRotation.Yaw < -90.f && ForwardRotation.Yaw >= -180.f || ForwardRotation.Yaw > 90.f && ForwardRotation.Yaw <= 180.f)
-	{
-		if (PointRotation.Yaw > ForwardRotation.Yaw && PointRotation.Yaw < LeftRotation.Yaw)
-		{
-			return Weight *= -1.f;
-		}
+		Weight *= -1.f;
 	}
 
 	//Debug
-	//GEngine->AddOnScreenDebugMessage(-1, 0.f, FColor::Yellow, FString::Printf(TEXT("MachineSpirit: Route point weight: %f"), Weight));
+	GEngine->AddOnScreenDebugMessage(-1, 0.f, FColor::Red, FString::Printf(TEXT("MachineSpirit: Route left rotation: %f"), LeftRotation.Yaw));
 	GEngine->AddOnScreenDebugMessage(-1, 0.f, FColor::Red, FString::Printf(TEXT("MachineSpirit: Route point rotation: %f"), PointRotation.Yaw));
 	GEngine->AddOnScreenDebugMessage(-1, 0.f, FColor::Red, FString::Printf(TEXT("MachineSpirit: Route forward rotation: %f"), ForwardRotation.Yaw));
-	GEngine->AddOnScreenDebugMessage(-1, 0.f, FColor::Red, FString::Printf(TEXT("MachineSpirit: Route left rotation: %f"), LeftRotation.Yaw));
+	
 
 	return Weight;
 }
@@ -579,61 +712,97 @@ float AMachineSpirit::DefineGroundBoundsWeight()
 	if (!IsValid(OwnedLandraider)) return 0.f;
 	if (PawnDimensions == FVector(0.f, 0.f, 0.f)) return 0.f;
 
-	float DeltaX = TraceLength * 0.8f;
-	float DeltaY = PawnDimensions.Y;
+	float DeltaX = PawnDimensions.X / 2.f;
+	float DeltaY = PawnDimensions.Y * 3.f;
+	//float TurnMultiplier = 1.2f;
 	FVector Location = OwnedLandraider->GetActorLocation();
 	FVector ForwardVector = OwnedLandraider->GetActorForwardVector();
 	FVector RightVector = OwnedLandraider->GetActorRightVector();
-	FVector ForwardEnd = Location + (ForwardVector * (DeltaX + (PawnDimensions.X / 2))) + (RightVector * 1.f);
-	FVector LeftEnd = Location + (ForwardVector * DeltaX) - (RightVector * DeltaY * 2);
-	FVector RightEnd = Location + (ForwardVector * DeltaX) + (RightVector * DeltaY * 2);
+	FVector ForwardEnd = Location + (ForwardVector * ((TraceLength * 1.5f) + DeltaX)) + (RightVector * 1.f);
+	FVector LeftEnd = Location + (ForwardVector * DeltaX) - (RightVector * DeltaY);
+	FVector RightEnd = Location + (ForwardVector * DeltaX) + (RightVector * DeltaY);
 	
+	// Debug trace.
+	//FHitResult HitResult;
+	//TArray<AActor*> ActorsToIgnore;
+
+	//UKismetSystemLibrary::LineTraceSingle(
+	//	GetWorld(),
+	//	Location,
+	//	ForwardEnd,
+	//	UEngineTypes::ConvertToTraceType(ECC_Visibility),
+	//	true,
+	//	ActorsToIgnore,
+	//	EDrawDebugTrace::ForDuration,
+	//	HitResult,
+	//	true,
+	//	FLinearColor::Yellow,
+	//	FLinearColor::Red,
+	//	0.1f
+	//);
+
+	//UKismetSystemLibrary::LineTraceSingle(
+	//	GetWorld(),
+	//	Location,
+	//	LeftEnd,
+	//	UEngineTypes::ConvertToTraceType(ECC_Visibility),
+	//	true,
+	//	ActorsToIgnore,
+	//	EDrawDebugTrace::ForDuration,
+	//	HitResult,
+	//	true,
+	//	FLinearColor::Yellow,
+	//	FLinearColor::Red,
+	//	0.1f
+	//);
+
+	//UKismetSystemLibrary::LineTraceSingle(
+	//	GetWorld(),
+	//	Location,
+	//	RightEnd,
+	//	UEngineTypes::ConvertToTraceType(ECC_Visibility),
+	//	true,
+	//	ActorsToIgnore,
+	//	EDrawDebugTrace::ForDuration,
+	//	HitResult,
+	//	true,
+	//	FLinearColor::Yellow,
+	//	FLinearColor::Red,
+	//	0.1f
+	//);
+
+	//GEngine->AddOnScreenDebugMessage(-1, 0.f, FColor::Yellow, FString::Printf(TEXT("MachineSpirit: ForwardBoundEndX: %f"), abs(ForwardEnd.X)));
+	//GEngine->AddOnScreenDebugMessage(-1, 0.f, FColor::Yellow, FString::Printf(TEXT("MachineSpirit: ForwardBoundEndY: %f"), abs(ForwardEnd.Y)));
+
 	// Вес находится в промежутке от -1 до 1. Знак определяет направление поворота: лево-право.!
 	float Weight = 0.f;
 
-	// Если спереди граница - поворачиваем направо.
-	if (ForwardEnd.X >= GroundBounds.X || ForwardEnd.X <= -GroundBounds.X)
+	bool bForwardXIntersection = abs(ForwardEnd.X) >= abs(GroundBounds.X);
+	bool bForwardYIntersection = abs(ForwardEnd.Y) >= abs(GroundBounds.Y);
+	bool bRightIntersection = abs(RightEnd.X) >= abs(GroundBounds.X) || abs(RightEnd.Y) >= abs(GroundBounds.Y);
+
+	if (bForwardXIntersection)
 	{
-		// Если справа тоже граница - поворачиваем налево.
 		Weight = (abs(ForwardEnd.X) - abs(GroundBounds.X)) / TraceLength;
-		
-		//if ((LeftEnd.X >= GroundBounds.X || LeftEnd.X <= -GroundBounds.X || LeftEnd.Y >= GroundBounds.Y || LeftEnd.Y <= -GroundBounds.Y))
-		//{
-		//	Weight *= 1.f;
-		//}
-		//else if (RightEnd.X >= GroundBounds.X || RightEnd.X <= -GroundBounds.X || RightEnd.Y >= GroundBounds.Y || RightEnd.Y <= -GroundBounds.Y)
-		//{
-		//	Weight *= -1.f;
-		//}
+		GEngine->AddOnScreenDebugMessage(-1, 0.f, FColor::Red, FString::Printf(TEXT("MachineSpirit: ForwardBoundEndX: %f"), abs(ForwardEnd.X)));
+
+		if (bRightIntersection)
+		{
+			Weight *= -1.f;
+		}
 	}
-	else if (ForwardEnd.Y >= GroundBounds.Y || ForwardEnd.Y <= -GroundBounds.Y)
+	else if (bForwardYIntersection)
 	{
 		Weight = (abs(ForwardEnd.Y) - abs(GroundBounds.Y)) / TraceLength;
+		GEngine->AddOnScreenDebugMessage(-1, 0.f, FColor::Red, FString::Printf(TEXT("MachineSpirit: ForwardBoundEndY: %f"), abs(ForwardEnd.Y)));
 
-		//if ((LeftEnd.X >= GroundBounds.X || LeftEnd.X <= -GroundBounds.X || LeftEnd.Y >= GroundBounds.Y || LeftEnd.Y <= -GroundBounds.Y))
-		//{
-		//	Weight *= 1.f;
-		//}
-		//else if (RightEnd.X >= GroundBounds.X || RightEnd.X <= -GroundBounds.X || RightEnd.Y >= GroundBounds.Y || RightEnd.Y <= -GroundBounds.Y)
-		//{
-		//	Weight *= -1.f;
-		//}
+		if (bRightIntersection)
+		{
+			Weight *= -1.f;
+		}
 	}
 
-	if ((LeftEnd.X >= GroundBounds.X || LeftEnd.X <= -GroundBounds.X || LeftEnd.Y >= GroundBounds.Y || LeftEnd.Y <= -GroundBounds.Y))
-	{
-		Weight *= 1.2f;
-	}
-	else if (RightEnd.X >= GroundBounds.X || RightEnd.X <= -GroundBounds.X || RightEnd.Y >= GroundBounds.Y || RightEnd.Y <= -GroundBounds.Y)
-	{
-		Weight *= -1.2f;
-	}
-
-	//Debug
-	//GEngine->AddOnScreenDebugMessage(-1, 0.f, FColor::Yellow, FString::Printf(TEXT("MachineSpirit: Ground bounds weight: %f"), Weight));
-
-	// Добавим веса для поворота от границы. А то какая-то ситуация.
-	return Weight * 1.5f;
+	return Weight;
 }
 
 void AMachineSpirit::FillWeightMap()
@@ -660,11 +829,15 @@ void AMachineSpirit::FillWeightMap()
 	WeightMap["Bounds"] = DefineGroundBoundsWeight();
 
 	//Debug
-	for (auto Direction : WeightMap)
-	{
-		GEngine->AddOnScreenDebugMessage(-1, 0.f, FColor::Blue, FString::Printf(TEXT("MachineSpirit: Weight direction: %s"), *Direction.Key.ToString()));
-		GEngine->AddOnScreenDebugMessage(-1, 0.f, FColor::Orange, FString::Printf(TEXT("MachineSpirit: Weight value: %f"), Direction.Value));
-	}
+	//for (auto Direction : WeightMap)
+	//{
+	//	GEngine->AddOnScreenDebugMessage(-1, 0.f, FColor::Blue, FString::Printf(TEXT("MachineSpirit: Weight direction: %s"), *Direction.Key.ToString()));
+	//	GEngine->AddOnScreenDebugMessage(-1, 0.f, FColor::Orange, FString::Printf(TEXT("MachineSpirit: Weight value: %f"), Direction.Value));
+	//}
+	//GEngine->AddOnScreenDebugMessage(-1, 0.f, FColor::Blue, FString::Printf(TEXT("MachineSpirit: Weight Bound: %f"), WeightMap["Route"]));
+	//GEngine->AddOnScreenDebugMessage(-1, 0.f, FColor::Orange, FString::Printf(TEXT("MachineSpirit: Weight value: %f"), Direction.Value));
+	//GEngine->AddOnScreenDebugMessage(-1, 0.f, FColor::Blue, FString::Printf(TEXT("MachineSpirit: Weight direction: %s"), *Direction.Key.ToString()));
+	//GEngine->AddOnScreenDebugMessage(-1, 0.f, FColor::Orange, FString::Printf(TEXT("MachineSpirit: Weight value: %f"), Direction.Value));
 }
 
 ESteerDirection AMachineSpirit::DefineSteerDirection()
@@ -679,10 +852,10 @@ ESteerDirection AMachineSpirit::DefineSteerDirection()
 	}
 
 	//Debug
-	for (auto Direction : DirectionWeightMap)
-	{
-		GEngine->AddOnScreenDebugMessage(-1, 0.f, FColor::Yellow, FString::Printf(TEXT("MachineSpirit: Weight value: %f"), Direction.Weight));
-	}
+	//for (auto Direction : DirectionWeightMap)
+	//{
+	//	GEngine->AddOnScreenDebugMessage(-1, 0.f, FColor::Yellow, FString::Printf(TEXT("MachineSpirit: Weight value: %f"), Direction.Weight));
+	//}
 
 	FDirectionWeight Direction = { ESteerDirection::Forward, 0.f };
 
@@ -698,18 +871,37 @@ ESteerDirection AMachineSpirit::DefineSteerDirection()
 
 	// Так, теперь меняем логику слегка - а то в любой непонятной ситуации ехать налево - такое себе.
 	// Сначала глядим что там спереди.
-	if (Direction.Weight < DirectionWeightMap[1].Weight)
+	//if (Direction.Weight < DirectionWeightMap[1].Weight)
+	//{
+	//	Direction.Weight = DirectionWeightMap[1].Weight;
+	//	Direction.Direction = DirectionWeightMap[1].Direction;
+	//}
+	//// Потом справа.
+	//if (Direction.Weight < DirectionWeightMap[2].Weight)
+	//{
+	//	Direction.Weight = DirectionWeightMap[2].Weight;
+	//	Direction.Direction = DirectionWeightMap[2].Direction;
+	//}
+	//// И в конце уже слева.
+	//if (Direction.Weight < DirectionWeightMap[0].Weight)
+	//{
+	//	Direction.Weight = DirectionWeightMap[0].Weight;
+	//	Direction.Direction = DirectionWeightMap[0].Direction;
+	//}
+
+	// Forward
+	if (Direction.Weight < DirectionWeightMap[1].Weight && DirectionWeightMap[1].Weight >= 3.f)
 	{
 		Direction.Weight = DirectionWeightMap[1].Weight;
 		Direction.Direction = DirectionWeightMap[1].Direction;
 	}
-	// Потом справа.
+	// Right turn.
 	if (Direction.Weight < DirectionWeightMap[2].Weight)
 	{
 		Direction.Weight = DirectionWeightMap[2].Weight;
 		Direction.Direction = DirectionWeightMap[2].Direction;
 	}
-	// И в конце уже слева.
+	// Lreft turn.
 	if (Direction.Weight < DirectionWeightMap[0].Weight)
 	{
 		Direction.Weight = DirectionWeightMap[0].Weight;
