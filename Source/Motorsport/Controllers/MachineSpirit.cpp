@@ -578,84 +578,84 @@ float AMachineSpirit::DefineRoutePointWeight()
 
 	float Distance = sqrtf(powf(DeltaLocation.X, 2.f) + powf(DeltaLocation.Y, 2.f));
 
-	FHitResult HitResult;
-	TArray<AActor*> ActorsToIgnore;
-	ActorsToIgnore.Add(OwnedLandraider);
+	//FHitResult HitResult;
+	//TArray<AActor*> ActorsToIgnore;
+	//ActorsToIgnore.Add(OwnedLandraider);
 
-	UKismetSystemLibrary::LineTraceSingle(
-		GetWorld(),
-		TraceStart,
-		RouteLocation,
-		UEngineTypes::ConvertToTraceType(ECC_Visibility),
-		true,
-		ActorsToIgnore,
-		EDrawDebugTrace::ForDuration,
-		HitResult,
-		true,
-		FLinearColor::Red,
-		FLinearColor::Green,
-		0.1f
-	);
+	//UKismetSystemLibrary::LineTraceSingle(
+	//	GetWorld(),
+	//	TraceStart,
+	//	RouteLocation,
+	//	UEngineTypes::ConvertToTraceType(ECC_Visibility),
+	//	true,
+	//	ActorsToIgnore,
+	//	EDrawDebugTrace::ForDuration,
+	//	HitResult,
+	//	true,
+	//	FLinearColor::Red,
+	//	FLinearColor::Green,
+	//	0.1f
+	//);
 
-	UKismetSystemLibrary::LineTraceSingle(
-		GetWorld(),
-		TraceStart,
-		TraceForward,
-		UEngineTypes::ConvertToTraceType(ECC_Visibility),
-		true,
-		ActorsToIgnore,
-		EDrawDebugTrace::ForDuration,
-		HitResult,
-		true,
-		FLinearColor::Yellow,
-		FLinearColor::Red,
-		0.1f
-	);
+	//UKismetSystemLibrary::LineTraceSingle(
+	//	GetWorld(),
+	//	TraceStart,
+	//	TraceForward,
+	//	UEngineTypes::ConvertToTraceType(ECC_Visibility),
+	//	true,
+	//	ActorsToIgnore,
+	//	EDrawDebugTrace::ForDuration,
+	//	HitResult,
+	//	true,
+	//	FLinearColor::Yellow,
+	//	FLinearColor::Red,
+	//	0.1f
+	//);
 
-	UKismetSystemLibrary::LineTraceSingle(
-		GetWorld(),
-		TraceStart,
-		TraceBack,
-		UEngineTypes::ConvertToTraceType(ECC_Visibility),
-		true,
-		ActorsToIgnore,
-		EDrawDebugTrace::ForDuration,
-		HitResult,
-		true,
-		FLinearColor::Yellow,
-		FLinearColor::Red,
-		0.1f
-	);
+	//UKismetSystemLibrary::LineTraceSingle(
+	//	GetWorld(),
+	//	TraceStart,
+	//	TraceBack,
+	//	UEngineTypes::ConvertToTraceType(ECC_Visibility),
+	//	true,
+	//	ActorsToIgnore,
+	//	EDrawDebugTrace::ForDuration,
+	//	HitResult,
+	//	true,
+	//	FLinearColor::Yellow,
+	//	FLinearColor::Red,
+	//	0.1f
+	//);
 
-	UKismetSystemLibrary::LineTraceSingle(
-		GetWorld(),
-		TraceStart,
-		TraceLeft,
-		UEngineTypes::ConvertToTraceType(ECC_Visibility),
-		true,
-		ActorsToIgnore,
-		EDrawDebugTrace::ForDuration,
-		HitResult,
-		true,
-		FLinearColor::Yellow,
-		FLinearColor::Red,
-		0.1f
-	);
+	//UKismetSystemLibrary::LineTraceSingle(
+	//	GetWorld(),
+	//	TraceStart,
+	//	TraceLeft,
+	//	UEngineTypes::ConvertToTraceType(ECC_Visibility),
+	//	true,
+	//	ActorsToIgnore,
+	//	EDrawDebugTrace::ForDuration,
+	//	HitResult,
+	//	true,
+	//	FLinearColor::Yellow,
+	//	FLinearColor::Red,
+	//	0.1f
+	//);
 
-	UKismetSystemLibrary::LineTraceSingle(
-		GetWorld(),
-		TraceStart,
-		TraceRight,
-		UEngineTypes::ConvertToTraceType(ECC_Visibility),
-		true,
-		ActorsToIgnore,
-		EDrawDebugTrace::ForDuration,
-		HitResult,
-		true,
-		FLinearColor::Yellow,
-		FLinearColor::Red,
-		0.1f
-	);
+	//UKismetSystemLibrary::LineTraceSingle(
+	//	GetWorld(),
+	//	TraceStart,
+	//	TraceRight,
+	//	UEngineTypes::ConvertToTraceType(ECC_Visibility),
+	//	true,
+	//	ActorsToIgnore,
+	//	EDrawDebugTrace::ForDuration,
+	//	HitResult,
+	//	true,
+	//	FLinearColor::Yellow,
+	//	FLinearColor::Red,
+	//	0.1f
+	//);
 
 	// Если едем прямо на точку, то продолжаем ехать.
 	//if ((ForwardRotation.Yaw - PointRotation.Yaw) == 0.f) return 0.f;
@@ -674,18 +674,28 @@ float AMachineSpirit::DefineRoutePointWeight()
 		Weight = PointWeightAdd + (1.f - (Distance / TraceLength));
 	}
 	// И куда повернуть.
+	bool bNorthWest = ForwardRotation.Yaw < 0.f && LeftRotation.Yaw < 0.f; // <<
+	bool bNorthEast = ForwardRotation.Yaw > 0.f && LeftRotation.Yaw < 0.f; // <<
+	bool bSouthWest = ForwardRotation.Yaw < 0.f && LeftRotation.Yaw > 0.f; // !!
+	bool bSouthEast = ForwardRotation.Yaw > 0.f && LeftRotation.Yaw > 0.f; // <<
+	bool bPointPositive = PointRotation.Yaw >= 0.f;
+	bool bLeftTurn = false;
 
-	bool bNordWest = ForwardRotation.Yaw < 0.f && LeftRotation.Yaw < 0.f;
-	bool bNordEast = ForwardRotation.Yaw > 0.f && LeftRotation.Yaw < 0.f;
-	bool bSouthWest = ForwardRotation.Yaw < 0.f && LeftRotation.Yaw < 0.f;
-	bool bSouthEast = ForwardRotation.Yaw > 0.f && LeftRotation.Yaw < 0.f;
-
-	if (bNordWest)
+	if (bNorthWest || bSouthEast || bNorthEast)
 	{
-
+		bLeftTurn = PointRotation.Yaw < ForwardRotation.Yaw && PointRotation.Yaw > LeftRotation.Yaw;
 	}
-
-	bool bLeftTurn = PointRotation.Yaw < ForwardRotation.Yaw&& PointRotation.Yaw > LeftRotation.Yaw;
+	else if (bSouthWest)
+	{
+		if (bPointPositive)
+		{
+			bLeftTurn = PointRotation.Yaw > ForwardRotation.Yaw && PointRotation.Yaw > LeftRotation.Yaw;
+		}
+		else
+		{
+			bLeftTurn = PointRotation.Yaw < ForwardRotation.Yaw && PointRotation.Yaw < LeftRotation.Yaw;
+		}
+	}
 
 	if (bLeftTurn)
 	{
@@ -693,9 +703,9 @@ float AMachineSpirit::DefineRoutePointWeight()
 	}
 
 	//Debug
-	GEngine->AddOnScreenDebugMessage(-1, 0.f, FColor::Red, FString::Printf(TEXT("MachineSpirit: Route left rotation: %f"), LeftRotation.Yaw));
-	GEngine->AddOnScreenDebugMessage(-1, 0.f, FColor::Red, FString::Printf(TEXT("MachineSpirit: Route point rotation: %f"), PointRotation.Yaw));
-	GEngine->AddOnScreenDebugMessage(-1, 0.f, FColor::Red, FString::Printf(TEXT("MachineSpirit: Route forward rotation: %f"), ForwardRotation.Yaw));
+	//GEngine->AddOnScreenDebugMessage(-1, 0.f, FColor::Red, FString::Printf(TEXT("MachineSpirit: Route left rotation: %f"), LeftRotation.Yaw));
+	//GEngine->AddOnScreenDebugMessage(-1, 0.f, FColor::Red, FString::Printf(TEXT("MachineSpirit: Route point rotation: %f"), PointRotation.Yaw));
+	//GEngine->AddOnScreenDebugMessage(-1, 0.f, FColor::Red, FString::Printf(TEXT("MachineSpirit: Route forward rotation: %f"), ForwardRotation.Yaw));
 	
 
 	return Weight;
@@ -784,7 +794,7 @@ float AMachineSpirit::DefineGroundBoundsWeight()
 	if (bForwardXIntersection)
 	{
 		Weight = (abs(ForwardEnd.X) - abs(GroundBounds.X)) / TraceLength;
-		GEngine->AddOnScreenDebugMessage(-1, 0.f, FColor::Red, FString::Printf(TEXT("MachineSpirit: ForwardBoundEndX: %f"), abs(ForwardEnd.X)));
+		//GEngine->AddOnScreenDebugMessage(-1, 0.f, FColor::Red, FString::Printf(TEXT("MachineSpirit: ForwardBoundEndX: %f"), abs(ForwardEnd.X)));
 
 		if (bRightIntersection)
 		{
@@ -794,7 +804,7 @@ float AMachineSpirit::DefineGroundBoundsWeight()
 	else if (bForwardYIntersection)
 	{
 		Weight = (abs(ForwardEnd.Y) - abs(GroundBounds.Y)) / TraceLength;
-		GEngine->AddOnScreenDebugMessage(-1, 0.f, FColor::Red, FString::Printf(TEXT("MachineSpirit: ForwardBoundEndY: %f"), abs(ForwardEnd.Y)));
+		//GEngine->AddOnScreenDebugMessage(-1, 0.f, FColor::Red, FString::Printf(TEXT("MachineSpirit: ForwardBoundEndY: %f"), abs(ForwardEnd.Y)));
 
 		if (bRightIntersection)
 		{

@@ -54,14 +54,14 @@ private:
 protected:
 	
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Movement")
-	float MaxMoveSpeed = 500.0f;
+	float MaxMoveSpeed = 600.0f;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Movement")
-	float MaxReverseSpeed = -200.0f;
+	float MaxReverseSpeed = -300.0f;
 
 	// Максимальная скорость поворота, она же угол.
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Movement")
-	float MaxTurnRate = 120.0f;
+	float MaxTurnRate = 180.0f;
 	
 	// Время разгона
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Movement")
