@@ -161,6 +161,8 @@ private:
 	UFUNCTION()
 	float DefineRoutePointWeight();
 	
+	//TODO: Уменьшение веса границы, если расстояние до точки < TraceLength. Чтобы корректно отрабатывался поворот в сторону точки у границы.
+	// Также можно поиграться с размером "поля  проезда" по точке.
 	UFUNCTION()
 	float DefineGroundBoundsWeight();
 	

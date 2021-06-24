@@ -64,7 +64,23 @@ FVector AMachineSpirit::GetOwnedPawnDimensions()
 void AMachineSpirit::DefineGroundBounds()
 {
 	if (!GameMode) return;
-	GroundBounds = GameMode->GetGroundBounds();
+	// Тут своя атмосфера, и границы должны быть немного больше, чем стандартные - инчаче поворот факапится около границ.
+	//GroundBounds = GameMode->GetGroundBounds();
+
+	AActor* Ground = GameMode->GetGround();
+	float Margin = GameMode->GetBoundMargin() / 4.f;
+
+	if (!IsValid(Ground)) return;
+
+	FVector BoundOrigin;
+	FVector BoundExtent;
+
+	Ground->GetActorBounds(true, BoundOrigin, BoundExtent);
+
+	BoundExtent.X -= Margin;
+	BoundExtent.Y -= Margin;
+
+	GroundBounds = FVector(BoundExtent.X, BoundExtent.Y, BoundExtent.Z);
 }
 
 void AMachineSpirit::Throttle(float InputIntensity)
@@ -114,11 +130,14 @@ void AMachineSpirit::BeginPlay()
 	SpiritState = EMachineSpiritState::Sleeps;
 
 	GameMode = Cast<AMotorsportGameModeBase>(UGameplayStatics::GetGameMode(GetWorld()));
-	if (IsValid(GameMode))
-	{
-		CurrentRoute = GameMode->GetRouteActor();
-		GroundBounds = GameMode->GetGroundBounds();
-	}
+	
+	DefineGroundBounds();
+
+	//if (IsValid(GameMode))
+	//{
+	//	CurrentRoute = GameMode->GetRouteActor();
+	//	GroundBounds = GameMode->GetGroundBounds();
+	//}
 }
 
 void AMachineSpirit::OnPossess(APawn* InPawn)
@@ -257,7 +276,7 @@ void AMachineSpirit::TraceForward()
 	ActorsToIgnore.Add(OwnedLandraider);
 	float Distance = 0; // Расстояние до точки столкновения луча с препятствием. Для расчёта уровня угрозы.
 
-	float DeltaX = PawnDimensions.X / 2;
+	float DeltaX = PawnDimensions.X / 2.f;
 	float DeltaY = 1.f;
 	FVector ForwardVector = OwnedLandraider->GetActorForwardVector();
 	FVector RightVector = OwnedLandraider->GetActorRightVector();
@@ -541,7 +560,7 @@ int AMachineSpirit::DefineCurrentRoutePoint()
 	//Debug
 	//float number = CurrentRoute->GetRouteSpline()->GetNumberOfSplinePoints();
 	//GEngine->AddOnScreenDebugMessage(-1, 0.f, FColor::Red, FString::Printf(TEXT("MachineSpirit: Current route points number: %f"), number));
-	float index = CurrentRoutePointIndex;
+	//float index = CurrentRoutePointIndex;
 	//GEngine->AddOnScreenDebugMessage(-1, 0.f, FColor::Red, FString::Printf(TEXT("MachineSpirit: Current route point: %f"), index));
 
 	return CurrentRoutePointIndex;
@@ -551,8 +570,14 @@ float AMachineSpirit::DefineRoutePointWeight()
 {
 	DefineCurrentRoutePoint();
 
-	if (CurrentRoutePointIndex < 1 || CurrentRoutePointIndex >= CurrentRoute->GetRouteSpline()->GetNumberOfSplinePoints())
+	if (CurrentRoutePointIndex < 1)
 	{
+		return 0.f;
+	}
+	if (CurrentRoutePointIndex >= CurrentRoute->GetRouteSpline()->GetNumberOfSplinePoints())
+	{
+		// Ну так, на будущее.
+		//SpiritState = EMachineSpiritState::Sleeps;
 		return 0.f;
 	}
 
@@ -615,7 +640,7 @@ float AMachineSpirit::DefineRoutePointWeight()
 	//UKismetSystemLibrary::LineTraceSingle(
 	//	GetWorld(),
 	//	TraceStart,
-	//	TraceBack,
+	//	TraceLeft,
 	//	UEngineTypes::ConvertToTraceType(ECC_Visibility),
 	//	true,
 	//	ActorsToIgnore,
@@ -630,7 +655,7 @@ float AMachineSpirit::DefineRoutePointWeight()
 	//UKismetSystemLibrary::LineTraceSingle(
 	//	GetWorld(),
 	//	TraceStart,
-	//	TraceLeft,
+	//	TraceBack,
 	//	UEngineTypes::ConvertToTraceType(ECC_Visibility),
 	//	true,
 	//	ActorsToIgnore,
@@ -681,7 +706,11 @@ float AMachineSpirit::DefineRoutePointWeight()
 	bool bPointPositive = PointRotation.Yaw >= 0.f;
 	bool bLeftTurn = false;
 
-	if (bNorthWest || bSouthEast || bNorthEast)
+	if (bNorthWest || bNorthEast)
+	{
+		bLeftTurn = PointRotation.Yaw < ForwardRotation.Yaw && PointRotation.Yaw > LeftRotation.Yaw;
+	}
+	else if (bSouthEast)
 	{
 		bLeftTurn = PointRotation.Yaw < ForwardRotation.Yaw && PointRotation.Yaw > LeftRotation.Yaw;
 	}
@@ -703,10 +732,32 @@ float AMachineSpirit::DefineRoutePointWeight()
 	}
 
 	//Debug
-	//GEngine->AddOnScreenDebugMessage(-1, 0.f, FColor::Red, FString::Printf(TEXT("MachineSpirit: Route left rotation: %f"), LeftRotation.Yaw));
-	//GEngine->AddOnScreenDebugMessage(-1, 0.f, FColor::Red, FString::Printf(TEXT("MachineSpirit: Route point rotation: %f"), PointRotation.Yaw));
-	//GEngine->AddOnScreenDebugMessage(-1, 0.f, FColor::Red, FString::Printf(TEXT("MachineSpirit: Route forward rotation: %f"), ForwardRotation.Yaw));
-	
+	//if (LeftRotation.Yaw > 0.f)
+	//{
+	//	GEngine->AddOnScreenDebugMessage(-1, 0.f, FColor::Blue, FString::Printf(TEXT("MachineSpirit: Route left rotation: %f"), LeftRotation.Yaw));
+	//}
+	//else
+	//{
+	//	GEngine->AddOnScreenDebugMessage(-1, 0.f, FColor::Red, FString::Printf(TEXT("MachineSpirit: Route left rotation: %f"), LeftRotation.Yaw));
+	//}
+
+	//if (PointRotation.Yaw > 0.f)
+	//{
+	//	GEngine->AddOnScreenDebugMessage(-1, 0.f, FColor::Blue, FString::Printf(TEXT("MachineSpirit: Route point rotation: %f"), PointRotation.Yaw));
+	//}
+	//else
+	//{
+	//	GEngine->AddOnScreenDebugMessage(-1, 0.f, FColor::Red, FString::Printf(TEXT("MachineSpirit: Route point rotation: %f"), PointRotation.Yaw));
+	//}
+
+	//if (ForwardRotation.Yaw > 0.f)
+	//{
+	//	GEngine->AddOnScreenDebugMessage(-1, 0.f, FColor::Blue, FString::Printf(TEXT("MachineSpirit: Route forward rotation: %f"), ForwardRotation.Yaw));
+	//}
+	//else
+	//{
+	//	GEngine->AddOnScreenDebugMessage(-1, 0.f, FColor::Red, FString::Printf(TEXT("MachineSpirit: Route forward rotation: %f"), ForwardRotation.Yaw));
+	//}
 
 	return Weight;
 }

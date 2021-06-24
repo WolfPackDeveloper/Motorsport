@@ -145,6 +145,11 @@ AActor* AMotorsportGameModeBase::GetGround() const
 	return GroundActor;
 }
 
+float AMotorsportGameModeBase::GetBoundMargin() const
+{
+	return BoundMargin;
+}
+
 FVector AMotorsportGameModeBase::GetGroundBounds() const
 {
 	return GroundAccessBounds;

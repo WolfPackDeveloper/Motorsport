@@ -63,7 +63,7 @@ private:
 protected:
 
 	UPROPERTY(EditDefaultsOnly, Category = "GroundBounds")
-	float BoundMargin = 200.f;
+	float BoundMargin = 1000.f;
 
 	UPROPERTY(BlueprintReadWrite)
 	EGameStatus GameStatus = EGameStatus::GameStopped;
@@ -71,9 +71,6 @@ protected:
 	// И это тоже.
 	UPROPERTY(EditDefaultsOnly, Category = "Route")
 	TSubclassOf<ARouteActor> RouteClass;
-
-	//UPROPERTY(EditDefaultsOnly, Category = "Machine")
-	//TSubclassOf<AMachineSpirit> MachineSpiritClass;
 
 	UPROPERTY(EditDefaultsOnly, Category = "Machine")
 	TSubclassOf<ALandraider> MachineClass;
@@ -100,6 +97,9 @@ public:
 
 	UFUNCTION()
 	AActor* GetGround() const;
+
+	UFUNCTION()
+	float GetBoundMargin() const;
 
 	UFUNCTION()
 	FVector GetGroundBounds() const;
